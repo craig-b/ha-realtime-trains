@@ -96,5 +96,150 @@
     "abort": {
       "already_configured": "Account is already configured"
     }
+  },
+  "exceptions": {
+    "account_not_ready": {
+      "message": "The Realtime Trains account is still loading. Wait a moment and retry."
+    },
+    "bad_datetime": {
+      "message": "`{value}` is not a valid ISO 8601 datetime."
+    },
+    "bad_request": {
+      "message": "Realtime Trains rejected the request: {detail}"
+    },
+    "cannot_connect": {
+      "message": "Cannot reach data.rtt.io: {detail}"
+    },
+    "config_entry_not_found": {
+      "message": "No Realtime Trains account with entry id `{entry_id}`."
+    },
+    "coordinator_not_found": {
+      "message": "No board or service tracker matches subentry `{subentry_id}`. It may have been removed."
+    },
+    "date_required_with_headcode": {
+      "message": "A departure date is required when using a headcode."
+    },
+    "device_not_a_subentry": {
+      "message": "Device `{device_id}` is not a Realtime Trains board or service tracker."
+    },
+    "device_not_found": {
+      "message": "No device with id `{device_id}`."
+    },
+    "invalid_auth": {
+      "message": "The token was rejected by Realtime Trains."
+    },
+    "not_found": {
+      "message": "Realtime Trains could not find the requested resource: {detail}"
+    },
+    "rate_limited": {
+      "message": "Your API token is rate-limited. Wait and retry. ({detail})"
+    },
+    "service_id_required": {
+      "message": "Either a unique_identity or a headcode is required."
+    },
+    "unknown": {
+      "message": "Unexpected error: {detail}"
+    },
+    "window_too_large": {
+      "message": "The requested time window exceeds 23 hours 59 minutes. Narrow time_to or use time_window."
+    }
+  },
+  "services": {
+    "get_departures": {
+      "description": "Fetch a departure board on demand for the chosen account.",
+      "fields": {
+        "config_entry_id": {
+          "description": "The Realtime Trains account to use.",
+          "name": "Account"
+        },
+        "detailed": {
+          "description": "Enable detailed mode (requires the allowDetailed entitlement).",
+          "name": "Detailed"
+        },
+        "filter_from": {
+          "description": "Only return trains that previously called at this station.",
+          "name": "Filter from"
+        },
+        "filter_to": {
+          "description": "Only return trains that subsequently call at this station.",
+          "name": "Filter to"
+        },
+        "limit": {
+          "description": "Truncate the result list. Default 10.",
+          "name": "Limit"
+        },
+        "station": {
+          "description": "Short or long code or `namespace:code` form.",
+          "name": "Station"
+        },
+        "time_from": {
+          "description": "ISO 8601 start of the query window. Defaults to now.",
+          "name": "Time from"
+        },
+        "time_to": {
+          "description": "End of the query window. Mutually exclusive with time_window.",
+          "name": "Time to"
+        },
+        "time_window": {
+          "description": "Window width in minutes. Defaults to 60.",
+          "name": "Time window"
+        }
+      },
+      "name": "Get departures"
+    },
+    "get_service": {
+      "description": "Fetch full detail for a single service, including formation and Know-Your-Train data where entitled.",
+      "fields": {
+        "config_entry_id": {
+          "description": "The Realtime Trains account to use.",
+          "name": "Account"
+        },
+        "date": {
+          "description": "Departure date from origin. Required with headcode.",
+          "name": "Date"
+        },
+        "headcode": {
+          "description": "Train reporting identity, e.g. 1L40.",
+          "name": "Headcode"
+        },
+        "namespace": {
+          "description": "Defaults to gb-nr.",
+          "name": "Namespace"
+        },
+        "unique_identity": {
+          "description": "Full unique identity, e.g. gb-nr:L01525:2025-10-26.",
+          "name": "Unique identity"
+        }
+      },
+      "name": "Get service"
+    },
+    "find_station": {
+      "description": "Search the cached RTT stops list without going to the network.",
+      "fields": {
+        "limit": {
+          "description": "Maximum number of results. Default 10.",
+          "name": "Limit"
+        },
+        "namespace": {
+          "description": "Filter to one namespace. Defaults to your token's first namespace.",
+          "name": "Namespace"
+        },
+        "query": {
+          "description": "Substring to match against station descriptions or codes. Case-insensitive.",
+          "name": "Query"
+        }
+      },
+      "name": "Find station"
+    },
+    "refresh_now": {
+      "description": "Force an immediate refresh of a board or service tracker device.",
+      "fields": {
+        "device_id": {
+          "description": "The device ID of the board or service tracker to refresh.",
+          "name": "Device"
+        }
+      },
+      "name": "Refresh now"
+    }
   }
 }

@@ -1,0 +1,110 @@
+get_departures:
+  fields:
+    config_entry_id:
+      required: true
+      selector:
+        config_entry:
+          integration: realtime_trains
+    station:
+      required: true
+      example: "CLPHMJN"
+      selector:
+        text:
+    time_from:
+      required: false
+      selector:
+        text:
+    time_to:
+      required: false
+      selector:
+        text:
+    time_window:
+      required: false
+      default: 60
+      selector:
+        number:
+          min: 15
+          max: 1440
+          mode: box
+          unit_of_measurement: minutes
+    filter_from:
+      required: false
+      example: "WAT"
+      selector:
+        text:
+    filter_to:
+      required: false
+      example: "WOK"
+      selector:
+        text:
+    detailed:
+      required: false
+      default: false
+      selector:
+        boolean:
+    limit:
+      required: false
+      default: 10
+      selector:
+        number:
+          min: 1
+          max: 50
+          mode: box
+
+get_service:
+  fields:
+    config_entry_id:
+      required: true
+      selector:
+        config_entry:
+          integration: realtime_trains
+    unique_identity:
+      required: false
+      example: "gb-nr:L01525:2025-10-26"
+      selector:
+        text:
+    headcode:
+      required: false
+      example: "1L40"
+      selector:
+        text:
+    date:
+      required: false
+      selector:
+        date:
+    namespace:
+      required: false
+      default: "gb-nr"
+      example: "gb-nr"
+      selector:
+        text:
+
+find_station:
+  fields:
+    query:
+      required: false
+      example: "Clapham"
+      selector:
+        text:
+    namespace:
+      required: false
+      example: "gb-nr"
+      selector:
+        text:
+    limit:
+      required: false
+      default: 10
+      selector:
+        number:
+          min: 1
+          max: 50
+          mode: box
+
+refresh_now:
+  fields:
+    device_id:
+      required: true
+      example: "abc123device456"
+      selector:
+        device:
+          integration: realtime_trains

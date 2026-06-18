@@ -39,6 +39,7 @@ from .coordinator import (
     RealtimeTrainsRuntimeData,
     RealtimeTrainsServiceTrackerCoordinator,
 )
+from .services import async_setup_services
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -92,6 +93,7 @@ async def async_setup_entry(
 
     entry.async_on_unload(entry.add_update_listener(_async_reload_entry))
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    async_setup_services(hass)
     return True
 
 
