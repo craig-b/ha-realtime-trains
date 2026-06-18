@@ -1,0 +1,28 @@
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.15.14
+    hooks:
+      - id: ruff-check
+        args: [--fix]
+      - id: ruff-format
+        files: ^(custom_components|tests|scripts)/.+\.py$
+  - repo: https://github.com/codespell-project/codespell
+    rev: v2.4.2
+    hooks:
+      - id: codespell
+        args:
+          - --ignore-words-list=hass,iif,nam,NotIn
+          - --skip="./.*,*.csv,*.json,*.ambr"
+          - --quiet-level=2
+        exclude_types: [csv, json, html]
+        exclude: ^tests/fixtures/|tests/snapshots/
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: check-json
+        exclude: (.vscode|.devcontainer)
+      - id: check-yaml
+      - id: end-of-file-fixer
+      - id: trailing-whitespace
+      - id: no-commit-to-branch
+        args: [--branch=main]

@@ -1,0 +1,33 @@
+name: hassfest
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+jobs:
+  hassfest:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out integration repo
+        uses: actions/checkout@v4
+      - name: Check out Home Assistant core
+        uses: actions/checkout@v4
+        with:
+          repository: home-assistant/core
+          path: homeassistant-core
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+      - name: Mount integration into HA core
+        run: |
+          mkdir -p homeassistant-core/homeassistant/components/realtime_trains
+          cp -r custom_components/realtime_trains/. homeassistant-core/homeassistant/components/realtime_trains/
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r homeassistant-core/requirements.txt -r homeassistant-core/requirements_test.txt
+      - name: Run hassfest
+        run: |
+          cd homeassistant-core
+          python -m script.hassfest --integration realtime_trains

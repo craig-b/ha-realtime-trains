@@ -1,0 +1,20 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Realtime Trains",
+        "description": "Enter your Realtime Trains next-generation API token. Sign up at https://api-portal.rtt.io if you don't already have one.",
+        "data": {
+          "token": "API token",
+          "default_slot_count": "Default number of departures per board"
+        },
+        "data_description": {
+          "token": "A long-life access token or a refresh token. Both are detected and handled automatically."
+        }
+      }
+    },
+    "abort": {
+      "already_configured": "[%key:common::config_flow::abort::already_configured_account%]"
+    }
+  }
+}

@@ -1,0 +1,154 @@
+[build-system]
+requires = ["setuptools==78.1.1"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ha-realtime-trains"
+version = "0.0.0"
+description = "Home Assistant integration for the Realtime Trains next-generation API (data.rtt.io)."
+readme = "README.md"
+requires-python = ">=3.14.2"
+license = "MIT"
+license-files = ["LICENSE*"]
+authors = [
+  { name = "ha-realtime-trains contributors" },
+]
+keywords = ["home", "automation", "home-assistant", "uk", "rail", "trains"]
+
+[tool.setuptools]
+packages = ["custom_components"]
+
+[tool.ruff]
+required-version = ">=0.15.14"
+
+[tool.ruff.lint]
+select = [
+  "A001",
+  "ASYNC",
+  "B002",
+  "B003",
+  "B004",
+  "B005",
+  "B006",
+  "B007",
+  "B009",
+  "B010",
+  "B011",
+  "B012",
+  "B013",
+  "B014",
+  "B015",
+  "B016",
+  "B017",
+  "B018",
+  "B020",
+  "B021",
+  "B022",
+  "B023",
+  "B024",
+  "B025",
+  "B026",
+  "B027",
+  "B028",
+  "B029",
+  "B030",
+  "B031",
+  "B032",
+  "B033",
+  "B034",
+  "B035",
+  "B039",
+  "B904",
+  "B905",
+  "B911",
+  "BLE",
+  "C",
+  "COM818",
+  "D",
+  "DTZ003",
+  "DTZ004",
+  "DTZ011",
+  "E",
+  "F",
+  "F541",
+  "FLY",
+  "FURB",
+  "G",
+  "I",
+  "INP",
+  "ISC",
+  "ICN001",
+  "LOG",
+  "N804",
+  "N805",
+  "N806",
+  "N815",
+  "PERF",
+  "PGH",
+  "PIE",
+  "PL",
+  "PT",
+  "PTH",
+  "PYI",
+  "RET",
+  "RSE",
+  "RUF005",
+  "RUF006",
+  "RUF007",
+  "RUF008",
+  "RUF010",
+  "RUF013",
+  "RUF016",
+  "RUF017",
+  "RUF018",
+  "RUF019",
+  "RUF020",
+  "RUF021",
+  "RUF022",
+  "S",
+  "SIM",
+  "SLF",
+  "SLOT",
+  "T100",
+  "TID251",
+  "TID252",
+  "TRY",
+  "T20",
+  "UP",
+  "W",
+]
+
+ignore = [
+  "D202",
+  "D212",
+]
+
+[tool.ruff.lint.flake8-import-conventions.extend-aliases]
+voluptuous = "vol"
+
+[tool.ruff.lint.isort]
+force-sort-within-sections = true
+known-first-party = ["realtime_trains"]
+combine-as-imports = true
+split-on-trailing-comma = false
+
+[tool.ruff.lint.per-file-ignores]
+"custom_components/realtime_trains/*/*" = ["TID252"]
+"tests/*/*" = ["TID252", "S101", "SLF001"]
+"scripts/*" = ["T201", "T20", "INP001"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.coverage.run]
+source = ["custom_components"]
+
+[tool.coverage.report]
+exclude_lines = [
+  "pragma: no cover",
+  "def __repr__",
+  "raise AssertionError",
+  "raise NotImplementedError",
+  "if TYPE_CHECKING:",
+  "@overload",
+]
