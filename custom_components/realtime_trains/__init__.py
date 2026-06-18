@@ -4,42 +4,60 @@ Connects Home Assistant to the Realtime Trains next-generation API
 (`https://data.rtt.io`) for live UK train departures, platform
 information, service tracking and rolling-stock formation data.
 
-This module is the entry point for HA's config entry lifecycle. The
-runtime_data pattern is used: ``entry.runtime_data`` carries the
-:class:`RealtimeTrainsAccountCoordinator` once setup completes. The
-coordinator owns the API client and the cached stop list.
+The runtime_data pattern is used: each config entry's runtime_data
+holds a :class:`RealtimeTrainsRuntimeData` wrapper that contains the
+account coordinator (owning the API client and stops cache) plus a
+mapping of subentry_id to per-subentry coordinators (one per
+departure board or service tracker the user has added).
 
-Subentry coordinators (departure boards, service trackers) are set up
-per subentry in M5 and onward; this module currently only establishes
-the account entry so the coordinator is live and a future ``Add
-departure board`` action on the device page will work.
+Platform setup iterates the subentries the entry owns and constructs
+the appropriate coordinator per subentry, mirroring the Nederlandse
+Spoorwegen pattern.
 """
 
 from __future__ import annotations
 
 import logging
 
+from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryError, ConfigEntryNotReady
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from .api import RealtimeTrainsApi
-from .const import API_VERSION, CONF_TOKEN, DOMAIN, PLATFORMS
-from .coordinator import RealtimeTrainsAccountCoordinator, RealtimeTrainsConfigEntry
+from .const import (
+    API_VERSION,
+    CONF_TOKEN,
+    DOMAIN,
+    SUBENTRY_TYPE_DEPARTURE_BOARD,
+    SUBENTRY_TYPE_SERVICE_TRACKER,
+)
+from .coordinator import (
+    RealtimeTrainsAccountCoordinator,
+    RealtimeTrainsBoardCoordinator,
+    RealtimeTrainsConfigEntry,
+    RealtimeTrainsRuntimeData,
+    RealtimeTrainsServiceTrackerCoordinator,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
-type RealtimeTrainsAccountEntry = RealtimeTrainsConfigEntry
+PLATFORMS = [Platform.SENSOR]
 
 
 async def async_setup_entry(
-    hass: HomeAssistant, entry: RealtimeTrainsAccountEntry
+    hass: HomeAssistant, entry: RealtimeTrainsConfigEntry
 ) -> bool:
     """Set up Realtime Trains from a config entry.
 
-    Builds the API client, runs the first ``/api/info`` to validate
-    the token, and surface specific errors via translated ConfigEntry
-    exceptions so the user sees a sensible repair flow when needed.
+    Constructs the API client, runs the first ``/api/info`` via the
+    account coordinator to validate the token, then constructs child
+    coordinators for every monitored-item subentry the entry owns.
+    Transient first-refresh failures surface as
+    :class:`~homeassistant.exceptions.ConfigEntryNotReady` so HA
+    retries; auth failures surface as
+    :class:`~homeassistant.exceptions.ConfigEntryError` so a repair
+    issue is raised and the user can reauthenticate.
     """
     token: str = entry.data[CONF_TOKEN]
     client = RealtimeTrainsApi(
@@ -48,55 +66,97 @@ async def async_setup_entry(
         api_version=API_VERSION,
     )
 
-    coordinator = RealtimeTrainsAccountCoordinator(hass, entry, client)
-    # First refresh does the /api/info validation and primes the
-    # coordinator's cached state. Transient failures raise
-    # ConfigEntryNotReady so HA will retry; auth failures raise
-    # ConfigEntryError so a repair issue is created.
+    account_coordinator = RealtimeTrainsAccountCoordinator(hass, entry, client)
     try:
-        await coordinator.async_config_entry_first_refresh()
+        await account_coordinator.async_config_entry_first_refresh()
     except ConfigEntryError:
         raise
     except Exception as err:  # noqa: BLE001
-        # Any other failure during first refresh is treated as transient.
         raise ConfigEntryNotReady(
             translation_domain=DOMAIN,
             translation_key="cannot_connect",
         ) from err
 
-    entry.runtime_data = coordinator
+    runtime_data = RealtimeTrainsRuntimeData(account=account_coordinator)
+    entry.runtime_data = runtime_data
+
+    # Construct a per-subentry coordinator for every monitored item the
+    # account entry already owns. New subentries added later trigger the
+    # same construction via the per-subentry platform-setup callback.
+    for subentry_id, subentry in entry.subentries.items():
+        coordinator = await _build_subentry_coordinator(
+            hass, entry, subentry_id, subentry
+        )
+        if coordinator is not None:
+            runtime_data.subentry_coordinators[subentry_id] = coordinator
+
     entry.async_on_unload(entry.add_update_listener(_async_reload_entry))
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     return True
 
 
+async def _build_subentry_coordinator(
+    hass: HomeAssistant,
+    entry: RealtimeTrainsConfigEntry,
+    subentry_id: str,
+    subentry: object,
+) -> object | None:
+    """Construct the right coordinator for a subentry based on its type."""
+    runtime_data: RealtimeTrainsRuntimeData = entry.runtime_data
+    account = runtime_data.account
+    subentry_type = getattr(subentry, "subentry_type", None)
+    if subentry_type == SUBENTRY_TYPE_DEPARTURE_BOARD:
+        coordinator = RealtimeTrainsBoardCoordinator(
+            hass,
+            entry,
+            subentry_id,
+            subentry,
+            account,  # type: ignore[arg-type]
+        )
+        await coordinator.async_config_entry_first_refresh()
+        return coordinator
+    if subentry_type == SUBENTRY_TYPE_SERVICE_TRACKER:
+        coordinator = RealtimeTrainsServiceTrackerCoordinator(
+            hass,
+            entry,
+            subentry_id,
+            subentry,
+            account,  # type: ignore[arg-type]
+        )
+        await coordinator.async_config_entry_first_refresh()
+        return coordinator
+    _LOGGER.warning(
+        "Unknown subentry type %s for %s; ignoring",
+        subentry_type,
+        entry.entry_id,
+    )
+    return None
+
+
 async def async_unload_entry(
-    hass: HomeAssistant, entry: RealtimeTrainsAccountEntry
+    hass: HomeAssistant, entry: RealtimeTrainsConfigEntry
 ) -> bool:
     """Unload a config entry."""
     return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
 
 
 async def _async_reload_entry(
-    hass: HomeAssistant, entry: RealtimeTrainsAccountEntry
+    hass: HomeAssistant, entry: RealtimeTrainsConfigEntry
 ) -> None:
     """Reload the integration when the entry is updated (reconfigure / reauth)."""
     await hass.config_entries.async_reload(entry.entry_id)
 
 
 async def async_migrate_entry(
-    hass: HomeAssistant, entry: RealtimeTrainsAccountEntry
+    hass: HomeAssistant, entry: RealtimeTrainsConfigEntry
 ) -> bool:
     """Migrate the config entry between versions.
 
-    Future schema changes are handled here. The first version (1.1)
-    has no migration needs yet.
+    No migrations needed for v1.x yet.
     """
     _LOGGER.debug(
         "Migrating config entry from version %s.%s",
         entry.version,
         entry.minor_version,
     )
-    # Reject downgrades from future versions (we never release beyond v1
-    # yet, but keeping the guard means we don't silently re-run setup).
     return entry.version <= 1
