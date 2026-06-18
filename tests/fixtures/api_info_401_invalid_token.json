@@ -1,0 +1,17 @@
+{
+  "request": {
+    "method": "GET",
+    "path": "/api/info",
+    "params": {}
+  },
+  "response": {
+    "status": 401,
+    "headers": {
+      "content-type": "application/json",
+      "www-authenticate": "Bearer"
+    },
+    "body": {
+      "message": "unauthorised"
+    }
+  }
+}

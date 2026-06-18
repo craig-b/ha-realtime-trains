@@ -1,0 +1,237 @@
+{
+  "request": {
+    "method": "GET",
+    "path": "/gb-nr/location",
+    "params": {
+      "code": "CLPHMJN",
+      "timeWindow": 120
+    }
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "content-type": "application/json",
+      "x-ratelimit-limit-minute": "60",
+      "x-ratelimit-remaining-minute": "55",
+      "x-ratelimit-limit-hour": "1000",
+      "x-ratelimit-remaining-hour": "975",
+      "x-ratelimit-limit-day": "10000",
+      "x-ratelimit-remaining-day": "9612",
+      "x-ratelimit-limit-week": "70000",
+      "x-ratelimit-remaining-week": "65000"
+    },
+    "body": {
+      "systemStatus": {
+        "realtimeNetworkRail": "OK",
+        "rttCore": "OK"
+      },
+      "query": {
+        "location": {
+          "namespace": "gb-nr",
+          "description": "Clapham Junction",
+          "shortCodes": ["CLJ"],
+          "longCodes": ["CLPHMJN", "CLPHMJ2", "CLPHMJM", "CLPHMJW", "CLPHMJC"]
+        },
+        "timeFrom": "2026-06-18T08:00:00+01:00",
+        "timeTo": "2026-06-18T10:00:00+01:00"
+      },
+      "reasons": [],
+      "services": [
+        {
+          "temporalData": {
+            "arrival": {
+              "scheduleAdvertised": "2026-06-18T08:15:00+01:00",
+              "realtimeActual": "2026-06-18T08:16:30+01:00",
+              "realtimeAdvertisedLateness": 1
+            },
+            "departure": {
+              "scheduleAdvertised": "2026-06-18T08:17:00+01:00",
+              "realtimeForecast": "2026-06-18T08:17:30+01:00"
+            },
+            "scheduledCallType": "ADVERTISED_OPEN",
+            "realtimeCallType": "ADVERTISED_OPEN",
+            "displayAs": "CALL",
+            "status": "AT_PLATFORM"
+          },
+          "locationMetadata": {
+            "platform": {
+              "planned": "3",
+              "actual": "5"
+            },
+            "numberOfVehicles": 10,
+            "isRequestStop": false,
+            "stockBranding": "South Western Railway"
+          },
+          "reasons": [],
+          "origin": [
+            {
+              "location": {
+                "namespace": "gb-nr",
+                "description": "London Waterloo",
+                "shortCodes": ["WAT"],
+                "longCodes": ["WATRMSN"]
+              },
+              "temporalData": {
+                "scheduleAdvertised": "2026-06-18T08:00:00+01:00",
+                "realtimeActual": "2026-06-18T08:00:30+01:00"
+              }
+            }
+          ],
+          "destination": [
+            {
+              "location": {
+                "namespace": "gb-nr",
+                "description": "Woking",
+                "shortCodes": ["WOK"],
+                "longCodes": ["WOKING"]
+              },
+              "temporalData": {
+                "scheduleAdvertised": "2026-06-18T08:45:00+01:00",
+                "realtimeForecast": "2026-06-18T08:46:30+01:00"
+              }
+            }
+          ],
+          "scheduleMetadata": {
+            "uniqueIdentity": "gb-nr:W00001:2026-06-18",
+            "namespace": "gb-nr",
+            "identity": "W00001",
+            "departureDate": "2026-06-18",
+            "operator": {
+              "code": "SW",
+              "name": "South Western Railway"
+            },
+            "modeType": "TRAIN",
+            "inPassengerService": true,
+            "trainReportingIdentity": "1L40",
+            "stpIndicator": "WTT"
+          }
+        },
+        {
+          "temporalData": {
+            "arrival": {
+              "scheduleAdvertised": "2026-06-18T08:25:00+01:00"
+            },
+            "departure": {
+              "scheduleAdvertised": "2026-06-18T08:27:00+01:00"
+            },
+            "scheduledCallType": "ADVERTISED_OPEN",
+            "displayAs": "CALL",
+            "status": null
+          },
+          "locationMetadata": {
+            "platform": {
+              "planned": "6"
+            },
+            "isRequestStop": false
+          },
+          "reasons": [],
+          "origin": [
+            {
+              "location": {
+                "namespace": "gb-nr",
+                "description": "London Waterloo",
+                "shortCodes": ["WAT"],
+                "longCodes": ["WATRMSN"]
+              },
+              "temporalData": {
+                "scheduleAdvertised": "2026-06-18T08:10:00+01:00"
+              }
+            }
+          ],
+          "destination": [
+            {
+              "location": {
+                "namespace": "gb-nr",
+                "description": "Guildford",
+                "shortCodes": ["GLD"],
+                "longCodes": ["GUILDF"]
+              },
+              "temporalData": {
+                "scheduleAdvertised": "2026-06-18T09:10:00+01:00"
+              }
+            }
+          ],
+          "scheduleMetadata": {
+            "uniqueIdentity": "gb-nr:W00002:2026-06-18",
+            "namespace": "gb-nr",
+            "identity": "W00002",
+            "departureDate": "2026-06-18",
+            "operator": {
+              "code": "SW",
+              "name": "South Western Railway"
+            },
+            "modeType": "TRAIN",
+            "inPassengerService": true,
+            "trainReportingIdentity": "1G42",
+            "stpIndicator": "WTT"
+          }
+        },
+        {
+          "temporalData": {
+            "arrival": {
+              "scheduleAdvertised": "2026-06-18T08:35:00+01:00",
+              "isCancelled": true,
+              "cancellationReasonCode": "TB"
+            },
+            "scheduledCallType": "ADVERTISED_OPEN",
+            "displayAs": "CANCELLED"
+          },
+          "locationMetadata": {
+            "platform": {
+              "planned": "1"
+            }
+          },
+          "reasons": [
+            {
+              "type": "CANCEL",
+              "code": "TB",
+              "system": "TRUST",
+              "shortText": "TOC request",
+              "longText": "At the request of the train operator."
+            }
+          ],
+          "origin": [
+            {
+              "location": {
+                "namespace": "gb-nr",
+                "description": "London Waterloo",
+                "shortCodes": ["WAT"],
+                "longCodes": ["WATRMSN"]
+              },
+              "temporalData": {
+                "scheduleAdvertised": "2026-06-18T08:20:00+01:00"
+              }
+            }
+          ],
+          "destination": [
+            {
+              "location": {
+                "namespace": "gb-nr",
+                "description": "Reading",
+                "shortCodes": ["RDG"],
+                "longCodes": ["READIN"]
+              },
+              "temporalData": {
+                "scheduleAdvertised": "2026-06-18T09:25:00+01:00"
+              }
+            }
+          ],
+          "scheduleMetadata": {
+            "uniqueIdentity": "gb-nr:W00003:2026-06-18",
+            "namespace": "gb-nr",
+            "identity": "W00003",
+            "departureDate": "2026-06-18",
+            "operator": {
+              "code": "SW",
+              "name": "South Western Railway"
+            },
+            "modeType": "TRAIN",
+            "inPassengerService": false,
+            "trainReportingIdentity": "1R44",
+            "stpIndicator": "WTT"
+          }
+        }
+      ]
+    }
+  }
+}

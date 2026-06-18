@@ -1,0 +1,34 @@
+{
+  "request": {
+    "method": "GET",
+    "path": "/api/info",
+    "params": {}
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "x-ratelimit-limit-minute": "60",
+      "x-ratelimit-remaining-minute": "58",
+      "x-ratelimit-limit-hour": "1000",
+      "x-ratelimit-remaining-hour": "987",
+      "x-ratelimit-limit-day": "10000",
+      "x-ratelimit-remaining-day": "9654",
+      "x-ratelimit-limit-week": "70000",
+      "x-ratelimit-remaining-week": "65432"
+    },
+    "body": {
+      "api_version": "2026-01-18",
+      "credentials": {
+        "entitlements": [
+          "allowDetailed",
+          "allowAllocations",
+          "allowKnowYourTrain"
+        ],
+        "historyRestriction": true,
+        "historyRestrictToDays": 14,
+        "namespaceRestriction": true,
+        "namespacesAvailable": ["gb-nr"]
+      }
+    }
+  }
+}

@@ -1,0 +1,247 @@
+{
+  "request": {
+    "method": "GET",
+    "path": "/gb-nr/service",
+    "params": {
+      "identity": "1L40",
+      "departureDate": "2026-06-18"
+    }
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "content-type": "application/json",
+      "x-ratelimit-limit-minute": "60",
+      "x-ratelimit-remaining-minute": "54",
+      "x-ratelimit-limit-hour": "1000",
+      "x-ratelimit-remaining-hour": "974"
+    },
+    "body": {
+      "systemStatus": {
+        "realtimeNetworkRail": "OK",
+        "rttCore": "OK"
+      },
+      "query": {
+        "uniqueIdentity": "gb-nr:W00001:2026-06-18"
+      },
+      "service": {
+        "scheduleMetadata": {
+          "uniqueIdentity": "gb-nr:W00001:2026-06-18",
+          "namespace": "gb-nr",
+          "identity": "W00001",
+          "departureDate": "2026-06-18",
+          "operator": {
+            "code": "SW",
+            "name": "South Western Railway"
+          },
+          "modeType": "TRAIN",
+          "inPassengerService": true,
+          "trainReportingIdentity": "1L40",
+          "stpIndicator": "WTT",
+          "runsAsRequired": false
+        },
+        "locations": [
+          {
+            "temporalData": {
+              "departure": {
+                "scheduleAdvertised": "2026-06-18T08:00:00+01:00",
+                "realtimeActual": "2026-06-18T08:00:30+01:00",
+                "realtimeAdvertisedLateness": 0
+              },
+              "scheduledCallType": "ADVERTISED_OPEN",
+              "displayAs": "CALL",
+              "status": "DEPARTING"
+            },
+            "locationMetadata": {
+              "platform": {
+                "planned": "5",
+                "actual": "5"
+              },
+              "numberOfVehicles": 10,
+              "isRequestStop": false,
+              "stockBranding": "South Western Railway",
+              "allowances": {
+                "engineering": 60,
+                "pathing": 120,
+                "performance": 180
+              }
+            },
+            "location": {
+              "namespace": "gb-nr",
+              "description": "London Waterloo",
+              "shortCodes": ["WAT"],
+              "longCodes": ["WATRMSN"]
+            },
+            "associatedServices": []
+          },
+          {
+            "temporalData": {
+              "arrival": {
+                "scheduleAdvertised": "2026-06-18T08:15:00+01:00",
+                "realtimeActual": "2026-06-18T08:16:30+01:00",
+                "realtimeAdvertisedLateness": 1
+              },
+              "departure": {
+                "scheduleAdvertised": "2026-06-18T08:17:00+01:00",
+                "realtimeForecast": "2026-06-18T08:17:30+01:00"
+              },
+              "scheduledCallType": "ADVERTISED_OPEN",
+              "displayAs": "CALL",
+              "status": "AT_PLATFORM"
+            },
+            "locationMetadata": {
+              "platform": {
+                "planned": "3",
+                "actual": "5"
+              },
+              "numberOfVehicles": 10,
+              "isRequestStop": false,
+              "stockBranding": "South Western Railway"
+            },
+            "location": {
+              "namespace": "gb-nr",
+              "description": "Clapham Junction",
+              "shortCodes": ["CLJ"],
+              "longCodes": ["CLPHMJN"]
+            },
+            "associatedServices": []
+          },
+          {
+            "temporalData": {
+              "arrival": {
+                "scheduleAdvertised": "2026-06-18T08:45:00+01:00",
+                "realtimeForecast": "2026-06-18T08:46:30+01:00"
+              },
+              "scheduledCallType": "ADVERTISED_OPEN",
+              "displayAs": "TERMINATES"
+            },
+            "locationMetadata": {
+              "platform": {
+                "planned": "1",
+                "actual": null
+              },
+              "isRequestStop": false
+            },
+            "location": {
+              "namespace": "gb-nr",
+              "description": "Woking",
+              "shortCodes": ["WOK"],
+              "longCodes": ["WOKING"]
+            },
+            "associatedServices": []
+          }
+        ],
+        "allocationData": [
+          {
+            "allocationIndex": 0,
+            "leadingClass": "444",
+            "passengerVehicles": 10,
+            "allocationItems": [
+              {
+                "stockType": "UNIT",
+                "identity": "444045",
+                "inReverse": false,
+                "identitySuppressed": false,
+                "numberOfVehicles": 5,
+                "componentVehicles": [
+                  {
+                    "identity": "63895",
+                    "isPassengerVehicle": true,
+                    "isLocomotive": false,
+                    "index": 0
+                  },
+                  {
+                    "identity": "63896",
+                    "isPassengerVehicle": true,
+                    "isLocomotive": false,
+                    "index": 1
+                  }
+                ]
+              },
+              {
+                "stockType": "UNIT",
+                "identity": "444046",
+                "inReverse": true,
+                "identitySuppressed": false,
+                "numberOfVehicles": 5,
+                "componentVehicles": [
+                  {
+                    "identity": "63901",
+                    "isPassengerVehicle": true,
+                    "isLocomotive": false,
+                    "index": 0
+                  }
+                ]
+              }
+            ],
+            "knowYourTrainData": {
+              "stockBranding": "South Western Railway",
+              "commonFacilities": ["wifi", "power", "toilet", "aircon"],
+              "data": [
+                {
+                  "identity": "444045",
+                  "groupFacilities": ["wifi", "power", "quiet"],
+                  "vehicles": [
+                    {
+                      "graphic": "class444/444045-A",
+                      "isPassengerVehicle": true,
+                      "coachLetter": "A",
+                      "individualFacilities": ["wifi", "power", "wheelchair"]
+                    },
+                    {
+                      "graphic": "class444/444045-B",
+                      "isPassengerVehicle": true,
+                      "coachLetter": "B",
+                      "individualFacilities": ["wifi", "power", "quiet"]
+                    }
+                  ]
+                },
+                {
+                  "identity": "444046",
+                  "groupFacilities": ["wifi", "power", "toilet"],
+                  "vehicles": [
+                    {
+                      "graphic": "class444/444046-D",
+                      "isPassengerVehicle": true,
+                      "coachLetter": "D",
+                      "individualFacilities": ["wifi", "power"]
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        ],
+        "origin": [
+          {
+            "location": {
+              "namespace": "gb-nr",
+              "description": "London Waterloo",
+              "shortCodes": ["WAT"],
+              "longCodes": ["WATRMSN"]
+            },
+            "temporalData": {
+              "scheduleAdvertised": "2026-06-18T08:00:00+01:00",
+              "realtimeActual": "2026-06-18T08:00:30+01:00"
+            }
+          }
+        ],
+        "destination": [
+          {
+            "location": {
+              "namespace": "gb-nr",
+              "description": "Woking",
+              "shortCodes": ["WOK"],
+              "longCodes": ["WOKING"]
+            },
+            "temporalData": {
+              "scheduleAdvertised": "2026-06-18T08:45:00+01:00",
+              "realtimeForecast": "2026-06-18T08:46:30+01:00"
+            }
+          }
+        ],
+        "reasons": []
+      }
+    }
+  }
+}

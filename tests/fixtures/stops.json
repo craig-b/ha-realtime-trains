@@ -1,0 +1,49 @@
+{
+  "request": {
+    "method": "GET",
+    "path": "/data/stops",
+    "params": {}
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "x-ratelimit-limit-hour": "1000",
+      "x-ratelimit-remaining-hour": "985",
+      "content-type": "application/json"
+    },
+    "body": {
+      "stops": [
+        {
+          "namespace": "gb-nr",
+          "description": "Clapham Junction",
+          "shortCode": "CLJ",
+          "uniqueIdentity": "gb-nr:CLJ"
+        },
+        {
+          "namespace": "gb-nr",
+          "description": "London Waterloo",
+          "shortCode": "WAT",
+          "uniqueIdentity": "gb-nr:WAT"
+        },
+        {
+          "namespace": "gb-nr",
+          "description": "Woking",
+          "shortCode": "WOK",
+          "uniqueIdentity": "gb-nr:WOK"
+        },
+        {
+          "namespace": "gb-nr",
+          "description": "Reading",
+          "shortCode": "RDG",
+          "uniqueIdentity": "gb-nr:RDG"
+        },
+        {
+          "namespace": "gb-nr",
+          "description": "Guildford",
+          "shortCode": "GLD",
+          "uniqueIdentity": "gb-nr:GLD"
+        }
+      ]
+    }
+  }
+}

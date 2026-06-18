@@ -1,0 +1,23 @@
+{
+  "request": {
+    "method": "GET",
+    "path": "/api/get_access_token",
+    "params": {}
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "x-ratelimit-limit-minute": "60",
+      "x-ratelimit-remaining-minute": "57"
+    },
+    "body": {
+      "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.fixture-access-token",
+      "entitlements": [
+        "allowDetailed",
+        "allowAllocations",
+        "allowKnowYourTrain"
+      ],
+      "validUntil": "2026-12-31T23:59:59Z"
+    }
+  }
+}

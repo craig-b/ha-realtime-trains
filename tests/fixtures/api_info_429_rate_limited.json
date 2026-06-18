@@ -1,0 +1,21 @@
+{
+  "request": {
+    "method": "GET",
+    "path": "/api/info",
+    "params": {}
+  },
+  "response": {
+    "status": 429,
+    "headers": {
+      "content-type": "application/json",
+      "retry-after": "30",
+      "x-ratelimit-limit-minute": "60",
+      "x-ratelimit-remaining-minute": "0",
+      "x-ratelimit-limit-hour": "1000",
+      "x-ratelimit-remaining-hour": "0"
+    },
+    "body": {
+      "message": "too many requests"
+    }
+  }
+}

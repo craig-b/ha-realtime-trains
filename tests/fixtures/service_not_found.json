@@ -1,0 +1,19 @@
+{
+  "request": {
+    "method": "GET",
+    "path": "/gb-nr/service",
+    "params": {
+      "identity": "9Z99",
+      "departureDate": "2026-06-18"
+    }
+  },
+  "response": {
+    "status": 404,
+    "headers": {
+      "content-type": "application/json"
+    },
+    "body": {
+      "message": "service not found"
+    }
+  }
+}
