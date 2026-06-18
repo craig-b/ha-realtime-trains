@@ -63,6 +63,8 @@ from .models import (
     LocationDisplayAs,
     LocationLineUpResponse,
     LocationStatus,
+    NetworkRailAllocation,
+    NetworkRailKnowYourTrainData,
     NetworkRailLocationLineUp,
     NetworkRailLocationLineUpResponse,
     NetworkRailServiceDetail,
@@ -491,8 +493,8 @@ class ServiceTrackerData:
     delay: int | None
     is_cancelled: bool | None
     display_as: LocationDisplayAs | None
-    formation: list[Any] | None
-    know_your_train: Any | None
+    formation: list[NetworkRailAllocation] | None
+    know_your_train: NetworkRailKnowYourTrainData | None
 
 
 class RealtimeTrainsServiceTrackerCoordinator(

@@ -16,7 +16,7 @@ re-adding the same station re-attaches to the same entity history.
 from __future__ import annotations
 
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from datetime import datetime
 import logging
 from typing import Any
@@ -461,26 +461,39 @@ class RealtimeTrainsServiceSensor(
 
     @property
     def extra_state_attributes(self) -> dict[str, Any] | None:
-        """Expose headcode/date/unique_identity as static-ish attributes."""
+        """Expose formation/KYT attributes on the departure entity."""
         if self.entity_description.key != "departure":
             return None
         data = self.coordinator.data
         coordinator = self.coordinator
-        attrs = {
+        attrs: dict[str, Any] = {
             "headcode": coordinator.headcode,
             "departure_date": coordinator.departure_date,
             "unique_identity": coordinator.unique_identity,
             "stock_branding": None,
             "leading_class": None,
             "passenger_vehicles": None,
+            "allocations": None,
+            "know_your_train": None,
         }
         if data and data.formation:
-            alloc = data.formation[0]
-            attrs["leading_class"] = getattr(alloc, "leading_class", None)
-            attrs["passenger_vehicles"] = getattr(alloc, "passenger_vehicles", None)
-            attrs["stock_branding"] = getattr(
-                getattr(alloc, "know_your_train_data", None),
-                "stock_branding",
-                None,
-            )
+            first = data.formation[0]
+            attrs["leading_class"] = first.leading_class
+            attrs["passenger_vehicles"] = first.passenger_vehicles
+            if first.know_your_train_data is not None:
+                attrs["stock_branding"] = first.know_your_train_data.stock_branding
+                attrs["know_your_train"] = _kyt_to_dict(first.know_your_train_data)
+            attrs["allocations"] = [
+                _allocation_to_dict(alloc) for alloc in data.formation
+            ]
         return {k: v for k, v in attrs.items() if v is not None}
+
+
+def _allocation_to_dict(alloc: Any) -> dict[str, Any]:
+    """Serialise a NetworkRailAllocation to a dict for entity attributes."""
+    return asdict(alloc)
+
+
+def _kyt_to_dict(kyt: Any) -> dict[str, Any]:
+    """Serialise a NetworkRailKnowYourTrainData to a dict for entity attributes."""
+    return asdict(kyt)
