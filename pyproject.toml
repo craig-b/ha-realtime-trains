@@ -15,6 +15,17 @@ authors = [
 ]
 keywords = ["home", "automation", "home-assistant", "uk", "rail", "trains"]
 
+[project.optional-dependencies]
+test = [
+  "pytest>=9.0",
+  "pytest-asyncio>=1.4",
+  "aiohttp>=3.13",
+]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+
 [tool.setuptools]
 packages = ["custom_components"]
 
@@ -134,7 +145,23 @@ split-on-trailing-comma = false
 
 [tool.ruff.lint.per-file-ignores]
 "custom_components/realtime_trains/*/*" = ["TID252"]
-"tests/*" = ["TID252", "S101", "SLF001", "PLR2004", "D102"]
+"tests/*" = [
+  "TID252",
+  "S101",
+  "S105",
+  "S106",
+  "SLF001",
+  "PLR2004",
+  "D102",
+  "D103",
+  "PT001",
+  "PT018",
+  "TRY003",
+  "PLC0415",
+  "PYI034",
+  "PYI036",
+  "INP001",
+]
 "scripts/*" = ["T201", "T20", "INP001"]
 
 [tool.ruff.lint.pydocstyle]
