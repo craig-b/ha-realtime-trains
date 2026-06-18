@@ -1,5 +1,65 @@
 {
   "config": {
+    "subentry": {
+      "departure_board": {
+        "step": {
+          "user": {
+            "title": "Add departure board",
+            "description": "Search for a station by name and configure how many departures you want exposed.",
+            "data": {
+              "station": "Station",
+              "filter_from": "Trains previously called at (optional)",
+              "filter_to": "Trains subsequently calling at (optional)",
+              "time_window": "Look-ahead window (minutes)",
+              "slot_count": "Number of departure slots to expose",
+              "polling_interval": "Polling interval (seconds)",
+              "detailed": "Detailed mode (requires entitlement)"
+            },
+            "data_description": {
+              "station": "Type part of the station name — e.g. 'Clapham' — and pick from the matches on the next step.",
+              "detailed": "Enables internal times and STP indicators. Requires allowDetailed on your token."
+            }
+          },
+          "pick_station": {
+            "title": "Pick a station",
+            "description": "{station_count} stations matched. Pick the exact one you want.",
+            "data": {
+              "station": "Station"
+            }
+          }
+        },
+        "error": {
+          "account_not_ready": "The account is still loading. Wait a moment and retry.",
+          "station_required": "Enter a station name or code.",
+          "no_station_matches": "No stations matched. Try a different fragment.",
+          "station_invalid": "Pick a station from the list.",
+          "cannot_connect": "Cannot reach Realtime Trains to search stations. Retry shortly."
+        }
+      },
+      "service_tracker": {
+        "step": {
+          "user": {
+            "title": "Add service tracker",
+            "description": "Follow a single train by headcode and date (or full unique identity).",
+            "data": {
+              "unique_identity": "Unique identity",
+              "headcode": "Headcode",
+              "date": "Departure date"
+            },
+            "data_description": {
+              "unique_identity": "Full `namespace:identity:date` form, e.g. `gb-nr:1L40:2026-06-18`. Takes priority over headcode+date.",
+              "headcode": "Train reporting identity, e.g. `1L40`.",
+              "date": "Departure date from the train's planned origin."
+            }
+          }
+        },
+        "error": {
+          "account_not_ready": "The account is still loading. Wait a moment and retry.",
+          "headcode_required": "Either headcode+date or unique identity is required.",
+          "service_not_found": "No service found with the given headcode/date (or unique identity)."
+        }
+      }
+    },
     "step": {
       "user": {
         "title": "Realtime Trains",
