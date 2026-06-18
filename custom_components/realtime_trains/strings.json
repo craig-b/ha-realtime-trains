@@ -11,7 +11,27 @@
         "data_description": {
           "token": "A long-life access token or a refresh token. Both are detected and handled automatically."
         }
+      },
+      "reconfigure": {
+        "title": "Replace token",
+        "description": "Paste a new Realtime Trains API token to replace the one configured under {reconfigure_title}. Your monitored boards and service trackers will be preserved.",
+        "data": {
+          "token": "New API token"
+        }
+      },
+      "reauth_confirm": {
+        "title": "Reauthenticate Realtime Trains",
+        "description": "The token for {reauth_title} is no longer valid. Enter a new Realtime Trains API token.",
+        "data": {
+          "token": "New API token"
+        }
       }
+    },
+    "error": {
+      "cannot_connect": "Cannot connect to data.rtt.io. Check your network and retry.",
+      "invalid_auth": "The token was rejected by Realtime Trains. Make sure you're using a next-generation API token from api-portal.rtt.io.",
+      "rate_limited": "Your API token is rate-limited. Wait a few minutes and retry.",
+      "unknown": "Unexpected error. Check the Home Assistant log for details."
     },
     "abort": {
       "already_configured": "[%key:common::config_flow::abort::already_configured_account%]"
