@@ -1,5 +1,43 @@
 {
   "entity": {
-    "sensor": {}
+    "sensor": {
+      "next_departure": {"default": "mdi:train"},
+      "departure_2": {"default": "mdi:train"},
+      "departure_3": {"default": "mdi:train"},
+      "departure_4": {"default": "mdi:train"},
+      "departure_5": {"default": "mdi:train"},
+      "departure_6": {"default": "mdi:train"},
+      "departure_7": {"default": "mdi:train"},
+      "departure_8": {"default": "mdi:train"},
+      "departure_9": {"default": "mdi:train"},
+      "departure_10": {"default": "mdi:train"},
+      "delay": {"default": "mdi:timer-sand"},
+      "live_status": {"default": "mdi:state-machine"},
+      "service_departure": {"default": "mdi:train"},
+      "service_arrival": {"default": "mdi:flag-checkered"},
+      "service_delay": {"default": "mdi:timer-sand"},
+      "service_live_status": {"default": "mdi:state-machine"},
+      "rate_limit_minute": {"default": "mdi:speedometer"},
+      "rate_limit_hour": {"default": "mdi:speedometer"},
+      "rate_limit_day": {"default": "mdi:speedometer"},
+      "rate_limit_week": {"default": "mdi:speedometer"},
+      "rate_limit_remaining_minute": {"default": "mdi:speedometer"},
+      "rate_limit_remaining_hour": {"default": "mdi:speedometer"},
+      "rate_limit_remaining_day": {"default": "mdi:speedometer"},
+      "rate_limit_remaining_week": {"default": "mdi:speedometer"},
+      "api_version": {"default": "mdi:tag"}
+    },
+    "binary_sensor": {
+      "cancellations": {"default": "mdi:cancel"},
+      "platform_changes": {"default": "mdi:swap-horizontal"},
+      "history_restricted": {"default": "mdi:history"},
+      "namespace_restricted": {"default": "mdi:shield-alert"}
+    }
+  },
+  "services": {
+    "get_departures": {"service": "mdi:departure-board"},
+    "get_service": {"service": "mdi:train-car"},
+    "find_station": {"service": "mdi:magnify"},
+    "refresh_now": {"service": "mdi:refresh"}
   }
 }

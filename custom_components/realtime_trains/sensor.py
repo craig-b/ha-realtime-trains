@@ -29,8 +29,9 @@ from homeassistant.components.sensor import (
     SensorDeviceClass,
     SensorEntity,
     SensorEntityDescription,
+    SensorStateClass,
 )
-from homeassistant.const import UnitOfTime
+from homeassistant.const import EntityCategory, UnitOfTime
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.device_registry import DeviceEntryType, DeviceInfo
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
@@ -40,12 +41,14 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from .const import DOMAIN
 from .coordinator import (
     BoardData,
+    RealtimeTrainsAccountCoordinator,
     RealtimeTrainsBoardCoordinator,
     RealtimeTrainsConfigEntry,
     RealtimeTrainsRuntimeData,
     RealtimeTrainsServiceTrackerCoordinator,
     ServiceTrackerData,
 )
+from .models import RateLimitEntry, RateLimitSnapshot
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -245,6 +248,121 @@ def _service_device_info(
     )
 
 
+# --- Entity descriptions for account device --------------------------------
+
+
+@dataclass(kw_only=True, frozen=True)
+class AccountSensorEntityDescription(SensorEntityDescription):
+    """Describes a diagnostic sensor on the account device."""
+
+    value_fn: Callable[[RealtimeTrainsAccountCoordinator], StateType]
+
+
+@dataclass(kw_only=True, frozen=True)
+class AccountBinarySensorEntityDescription(BinarySensorEntityDescription):
+    """Describes a diagnostic binary sensor on the account device."""
+
+    value_fn: Callable[[RealtimeTrainsAccountCoordinator], bool | None]
+
+
+def _rate_limit_entry(snapshot: RateLimitSnapshot, dim: str, field: str) -> int | None:
+    """Pick ``limit`` or ``remaining`` from one rate-limit dimension."""
+    entry: RateLimitEntry | None = getattr(snapshot, dim, None)
+    if entry is None:
+        return None
+    return getattr(entry, field, None)
+
+
+def _account_api_version(coordinator: RealtimeTrainsAccountCoordinator) -> StateType:
+    if coordinator.data is None or coordinator.data.api_info is None:
+        return None
+    return coordinator.data.api_info.api_version
+
+
+def _account_history_restricted(
+    coordinator: RealtimeTrainsAccountCoordinator,
+) -> bool | None:
+    if coordinator.data is None or coordinator.data.api_info is None:
+        return None
+    return coordinator.data.api_info.credentials.history_restriction
+
+
+def _account_namespace_restricted(
+    coordinator: RealtimeTrainsAccountCoordinator,
+) -> bool | None:
+    if coordinator.data is None or coordinator.data.api_info is None:
+        return None
+    return coordinator.data.api_info.credentials.namespace_restriction
+
+
+# Dimensions: minute / hour / day / week — each yields a limit + remaining sensor.
+ACCOUNT_SENSOR_DESCRIPTIONS: tuple[AccountSensorEntityDescription, ...] = (
+    tuple(
+        AccountSensorEntityDescription(
+            key=f"rate_limit_{dim}",
+            translation_key=f"rate_limit_{dim}",
+            entity_category=EntityCategory.DIAGNOSTIC,
+            state_class=SensorStateClass.MEASUREMENT,
+            value_fn=(
+                lambda coord, dim=dim: _rate_limit_entry(
+                    coord.api.rate_limits, dim, "limit"
+                )
+            ),
+        )
+        for dim in ("minute", "hour", "day", "week")
+    )
+    + tuple(
+        AccountSensorEntityDescription(
+            key=f"rate_limit_remaining_{dim}",
+            translation_key=f"rate_limit_remaining_{dim}",
+            entity_category=EntityCategory.DIAGNOSTIC,
+            state_class=SensorStateClass.MEASUREMENT,
+            value_fn=(
+                lambda coord, dim=dim: _rate_limit_entry(
+                    coord.api.rate_limits, dim, "remaining"
+                )
+            ),
+        )
+        for dim in ("minute", "hour", "day", "week")
+    )
+    + (
+        AccountSensorEntityDescription(
+            key="api_version",
+            translation_key="api_version",
+            entity_category=EntityCategory.DIAGNOSTIC,
+            value_fn=_account_api_version,
+        ),
+    )
+)
+
+
+ACCOUNT_BINARY_DESCRIPTIONS: tuple[AccountBinarySensorEntityDescription, ...] = (
+    AccountBinarySensorEntityDescription(
+        key="history_restricted",
+        translation_key="history_restricted",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        value_fn=_account_history_restricted,
+    ),
+    AccountBinarySensorEntityDescription(
+        key="namespace_restricted",
+        translation_key="namespace_restricted",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        value_fn=_account_namespace_restricted,
+    ),
+)
+
+
+def _account_device_info(entry: RealtimeTrainsConfigEntry) -> DeviceInfo:
+    """Build device info tying account-diagnostic entities to one logical device."""
+    return DeviceInfo(
+        identifiers={(DOMAIN, f"account:{entry.entry_id}")},
+        name="Realtime Trains",
+        manufacturer=MANUFACTURER,
+        model="Account",
+        entry_type=DeviceEntryType.SERVICE,
+    )
+
+
 # --- Setup --------------------------------------------------------------
 
 
@@ -253,8 +371,10 @@ async def async_setup_entry(
     config_entry: RealtimeTrainsConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
-    """Set up sensor entities for every board and service-tracker subentry."""
+    """Set up sensor entities for the account and every subentry."""
     runtime_data: RealtimeTrainsRuntimeData = config_entry.runtime_data
+    account_entities = _build_account_entities(runtime_data.account, config_entry)
+    async_add_entities(account_entities)
     for subentry_id in config_entry.subentries:
         coordinator = runtime_data.subentry_coordinators.get(subentry_id)
         if coordinator is None:
@@ -265,6 +385,22 @@ async def async_setup_entry(
         elif isinstance(coordinator, RealtimeTrainsServiceTrackerCoordinator):
             entities = _build_service_entities(coordinator, subentry_id)
             async_add_entities(entities, config_subentry_id=subentry_id)
+
+
+def _build_account_entities(
+    coordinator: RealtimeTrainsAccountCoordinator,
+    config_entry: RealtimeTrainsConfigEntry,
+) -> list[SensorEntity | BinarySensorEntity]:
+    """Build all diagnostic entities attached to the account device."""
+    sensors: list[SensorEntity | BinarySensorEntity] = [
+        RealtimeTrainsAccountSensor(coordinator, config_entry, desc)
+        for desc in ACCOUNT_SENSOR_DESCRIPTIONS
+    ]
+    sensors.extend(
+        RealtimeTrainsAccountBinarySensor(coordinator, config_entry, desc)
+        for desc in ACCOUNT_BINARY_DESCRIPTIONS
+    )
+    return sensors
 
 
 def _build_board_entities(
@@ -497,3 +633,53 @@ def _allocation_to_dict(alloc: Any) -> dict[str, Any]:
 def _kyt_to_dict(kyt: Any) -> dict[str, Any]:
     """Serialise a NetworkRailKnowYourTrainData to a dict for entity attributes."""
     return asdict(kyt)
+
+
+class RealtimeTrainsAccountSensor(
+    CoordinatorEntity[RealtimeTrainsAccountCoordinator], SensorEntity
+):
+    """Diagnostic sensor on the account device (rate limits, api version)."""
+
+    _attr_attribution = "Data provided by Realtime Trains"
+    _attr_has_entity_name = True
+    entity_description: AccountSensorEntityDescription
+
+    def __init__(
+        self,
+        coordinator: RealtimeTrainsAccountCoordinator,
+        config_entry: RealtimeTrainsConfigEntry,
+        description: AccountSensorEntityDescription,
+    ) -> None:
+        super().__init__(coordinator)
+        self.entity_description = description
+        self._attr_device_info = _account_device_info(config_entry)
+        self._attr_unique_id = f"account:{config_entry.entry_id}:{description.key}"
+
+    @property
+    def native_value(self) -> StateType:
+        return self.entity_description.value_fn(self.coordinator)
+
+
+class RealtimeTrainsAccountBinarySensor(
+    CoordinatorEntity[RealtimeTrainsAccountCoordinator], BinarySensorEntity
+):
+    """Diagnostic binary sensor on the account device (restrictions)."""
+
+    _attr_attribution = "Data provided by Realtime Trains"
+    _attr_has_entity_name = True
+    entity_description: AccountBinarySensorEntityDescription
+
+    def __init__(
+        self,
+        coordinator: RealtimeTrainsAccountCoordinator,
+        config_entry: RealtimeTrainsConfigEntry,
+        description: AccountBinarySensorEntityDescription,
+    ) -> None:
+        super().__init__(coordinator)
+        self.entity_description = description
+        self._attr_device_info = _account_device_info(config_entry)
+        self._attr_unique_id = f"account:{config_entry.entry_id}:{description.key}"
+
+    @property
+    def is_on(self) -> bool | None:
+        return self.entity_description.value_fn(self.coordinator)

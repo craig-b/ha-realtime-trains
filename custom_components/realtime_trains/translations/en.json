@@ -1,4 +1,97 @@
 {
+  "entity": {
+    "binary_sensor": {
+      "cancellations": {
+        "name": "Cancellations"
+      },
+      "history_restricted": {
+        "name": "History restricted"
+      },
+      "namespace_restricted": {
+        "name": "Namespace restricted"
+      },
+      "platform_changes": {
+        "name": "Platform changes"
+      }
+    },
+    "sensor": {
+      "api_version": {
+        "name": "API version"
+      },
+      "departure_10": {
+        "name": "10th departure"
+      },
+      "departure_2": {
+        "name": "2nd departure"
+      },
+      "departure_3": {
+        "name": "3rd departure"
+      },
+      "departure_4": {
+        "name": "4th departure"
+      },
+      "departure_5": {
+        "name": "5th departure"
+      },
+      "departure_6": {
+        "name": "6th departure"
+      },
+      "departure_7": {
+        "name": "7th departure"
+      },
+      "departure_8": {
+        "name": "8th departure"
+      },
+      "departure_9": {
+        "name": "9th departure"
+      },
+      "delay": {
+        "name": "Delay"
+      },
+      "live_status": {
+        "name": "Live status"
+      },
+      "next_departure": {
+        "name": "Next departure"
+      },
+      "rate_limit_day": {
+        "name": "Rate limit (day)"
+      },
+      "rate_limit_hour": {
+        "name": "Rate limit (hour)"
+      },
+      "rate_limit_minute": {
+        "name": "Rate limit (minute)"
+      },
+      "rate_limit_remaining_day": {
+        "name": "Rate limit remaining (day)"
+      },
+      "rate_limit_remaining_hour": {
+        "name": "Rate limit remaining (hour)"
+      },
+      "rate_limit_remaining_minute": {
+        "name": "Rate limit remaining (minute)"
+      },
+      "rate_limit_remaining_week": {
+        "name": "Rate limit remaining (week)"
+      },
+      "rate_limit_week": {
+        "name": "Rate limit (week)"
+      },
+      "service_arrival": {
+        "name": "Arrival"
+      },
+      "service_delay": {
+        "name": "Delay"
+      },
+      "service_departure": {
+        "name": "Departure"
+      },
+      "service_live_status": {
+        "name": "Live status"
+      }
+    }
+  },
   "config": {
     "subentry": {
       "departure_board": {
