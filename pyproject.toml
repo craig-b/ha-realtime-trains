@@ -134,7 +134,7 @@ split-on-trailing-comma = false
 
 [tool.ruff.lint.per-file-ignores]
 "custom_components/realtime_trains/*/*" = ["TID252"]
-"tests/*/*" = ["TID252", "S101", "SLF001"]
+"tests/*" = ["TID252", "S101", "SLF001", "PLR2004", "D102"]
 "scripts/*" = ["T201", "T20", "INP001"]
 
 [tool.ruff.lint.pydocstyle]
