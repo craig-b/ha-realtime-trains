@@ -8,7 +8,6 @@ from unittest.mock import MagicMock
 import pytest
 
 pytest.importorskip("homeassistant")
-
 from homeassistant.const import CONF_TOKEN
 
 from custom_components.realtime_trains.const import DOMAIN

@@ -104,7 +104,10 @@ def _board_live_status(data: BoardData, slot: int = 0) -> StateType | datetime:
     if slot >= len(data.departures):
         return None
     status = data.departures[slot].live_status
-    return str(status) if status is not None else None
+    # ``LocationStatus`` is a StrEnum whose values are UPPERCASE (e.g.
+    # ``"DEPART_READY"``); HA's ENUM device class stores the state verbatim,
+    # so we lowercase it to keep the documented options consistent.
+    return str(status).lower() if status is not None else None
 
 
 # Tuple of board-entity descriptions. The slot count is dynamically
@@ -125,18 +128,16 @@ BOARD_BASE_SENSOR_DESCRIPTIONS: tuple[BoardSensorEntityDescription, ...] = (
         key="live_status",
         translation_key="live_status",
         device_class=SensorDeviceClass.ENUM,
+        # Mirrors the values of LocationStatus (lower-cased by
+        # ``_board_live_status``). ``scheduled`` is the implicit empty-state
+        # produced by the coordinator when no realtime status exists.
         options=[
-            "scheduled",
             "approaching",
             "arriving",
             "at_platform",
             "depart_preparing",
             "depart_ready",
             "departing",
-            "cancelled",
-            "diverted",
-            "terminated",
-            "starts",
         ],
         value_fn=_board_live_status,
     ),
@@ -371,7 +372,12 @@ async def async_setup_entry(
     config_entry: RealtimeTrainsConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
-    """Set up sensor entities for the account and every subentry."""
+    """Set up sensor entities for the account and every subentry.
+
+    Binary-sensor entities are registered via ``binary_sensor.py`` (so
+    they get ``binary_sensor.*`` entity IDs and live on the correct
+    platform). Only ``SensorEntity`` subclasses are produced here.
+    """
     runtime_data: RealtimeTrainsRuntimeData = config_entry.runtime_data
     account_entities = _build_account_entities(runtime_data.account, config_entry)
     async_add_entities(account_entities)
@@ -390,36 +396,30 @@ async def async_setup_entry(
 def _build_account_entities(
     coordinator: RealtimeTrainsAccountCoordinator,
     config_entry: RealtimeTrainsConfigEntry,
-) -> list[SensorEntity | BinarySensorEntity]:
-    """Build all diagnostic entities attached to the account device."""
-    sensors: list[SensorEntity | BinarySensorEntity] = [
+) -> list[SensorEntity]:
+    """Build all diagnostic SENSOR entities attached to the account device.
+
+    Binary sensors are set up separately in ``binary_sensor.py``.
+    """
+    return [
         RealtimeTrainsAccountSensor(coordinator, config_entry, desc)
         for desc in ACCOUNT_SENSOR_DESCRIPTIONS
     ]
-    sensors.extend(
-        RealtimeTrainsAccountBinarySensor(coordinator, config_entry, desc)
-        for desc in ACCOUNT_BINARY_DESCRIPTIONS
-    )
-    return sensors
 
 
 def _build_board_entities(
     coordinator: RealtimeTrainsBoardCoordinator, subentry_id: str
-) -> list[SensorEntity | BinarySensorEntity]:
+) -> list[SensorEntity]:
     """Build all sensor entities for one departure-board subentry."""
     slot_count = coordinator.slot_count
     slot_descriptions = tuple(_make_slot_description(i) for i in range(slot_count))
-    entities: list[SensorEntity | BinarySensorEntity] = [
+    entities: list[SensorEntity] = [
         RealtimeTrainsBoardSensor(coordinator, subentry_id, desc)
         for desc in slot_descriptions
     ]
     entities.extend(
         RealtimeTrainsBoardSensor(coordinator, subentry_id, desc)
         for desc in BOARD_BASE_SENSOR_DESCRIPTIONS
-    )
-    entities.extend(
-        RealtimeTrainsBoardBinarySensor(coordinator, subentry_id, desc)
-        for desc in BOARD_BINARY_DESCRIPTIONS
     )
     return entities
 

@@ -11,7 +11,6 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 
 pytest.importorskip("homeassistant")
-
 from homeassistant.core import HomeAssistant
 
 from custom_components.realtime_trains.const import (

@@ -58,7 +58,7 @@ Search the cached RTT stops list without going to the network.
 | Field | Type | Required | Description |
 |---|---|---|---|
 | `query` | string | no | Substring to match against station descriptions or codes. Case-insensitive. |
-| `namespace` | string | no | Filter to one namespace. Defaults to your token's first available namespace. |
+| `namespace` | string | no | Filter to one namespace. When omitted, all namespaces are searched. |
 | `limit` | integer | no | Max results. Default 10. |
 
 Returns `stops` as a list of `{ namespace, description, short_code, unique_identity }`. The stops list is cached for a week and refreshed in the background; the very first call after install will hit `/data/stops` once.
@@ -78,7 +78,7 @@ Force an immediate refresh of a specific departure board or service tracker, byp
 |---|---|---|---|
 | `device_id` | device | yes | The device ID of the board or service tracker to refresh. |
 
-Returns `ok: true` on success or raises a service error with a translated message if the underlying poll fails (e.g. rate-limited).
+Returns `ok: true` on success or raises a service error with a translated message if the underlying poll fails (e.g. rate-limited). The service awaits the actual refresh rather than just scheduling it, so polling errors are surfaced synchronously.
 
 ```yaml
 action: realtime_trains.refresh_now

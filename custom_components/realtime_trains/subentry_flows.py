@@ -62,7 +62,7 @@ from .const import (
     SUBENTRY_TYPE_DEPARTURE_BOARD,
     SUBENTRY_TYPE_SERVICE_TRACKER,
 )
-from .coordinator import RealtimeTrainsAccountCoordinator
+from .coordinator import RealtimeTrainsAccountCoordinator, RealtimeTrainsRuntimeData
 from .models import Stop
 
 _LOGGER = logging.getLogger(__name__)
@@ -234,8 +234,8 @@ class DepartureBoardSubentryFlow(ConfigSubentryFlow):
     def _coordinator(self) -> RealtimeTrainsAccountCoordinator | None:
         entry = self._get_entry()
         runtime = getattr(entry, "runtime_data", None)
-        if isinstance(runtime, RealtimeTrainsAccountCoordinator):
-            return runtime
+        if isinstance(runtime, RealtimeTrainsRuntimeData):
+            return runtime.account
         return None
 
     def _account_default_slot_count(self) -> int:
@@ -354,8 +354,8 @@ class ServiceTrackerSubentryFlow(ConfigSubentryFlow):
     def _coordinator(self) -> RealtimeTrainsAccountCoordinator | None:
         entry = self._get_entry()
         runtime = getattr(entry, "runtime_data", None)
-        if isinstance(runtime, RealtimeTrainsAccountCoordinator):
-            return runtime
+        if isinstance(runtime, RealtimeTrainsRuntimeData):
+            return runtime.account
         return None
 
 

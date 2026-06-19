@@ -61,6 +61,7 @@ from .const import (
 from .models import (
     ApiInfo,
     LocationDisplayAs,
+    LocationLineUp,
     LocationLineUpResponse,
     LocationStatus,
     NetworkRailAllocation,
@@ -283,8 +284,14 @@ class BoardData:
     namespace: str | None
 
 
-def _slot_from_lineup(svc: NetworkRailLocationLineUp) -> DepartureSlot:
-    """Reduce a NetworkRail location-line-up entry to a DepartureSlot."""
+def _slot_from_lineup(
+    svc: NetworkRailLocationLineUp | LocationLineUp,
+) -> DepartureSlot:
+    """Reduce a NetworkRail or generic-namespace line-up entry to a DepartureSlot.
+
+    The two ``*LocationLineUp`` classes share the same shape for every
+    field read here, so duck-typing handles both namespaces.
+    """
     td = svc.temporal_data
     md = svc.location_metadata
     sm = svc.schedule_metadata
@@ -331,7 +338,8 @@ def _slot_from_lineup(svc: NetworkRailLocationLineUp) -> DepartureSlot:
     in_service: bool | None = None
     if sm is not None:
         headcode = getattr(sm, "train_reporting_identity", None)
-        stp = str(sm.stp_indicator) if sm.stp_indicator is not None else None
+        stp_indicator = getattr(sm, "stp_indicator", None)
+        stp = str(stp_indicator) if stp_indicator is not None else None
         uid = sm.unique_identity
         ns = sm.namespace
         mode = str(sm.mode_type) if sm.mode_type is not None else None
@@ -445,11 +453,7 @@ class RealtimeTrainsBoardCoordinator(DataUpdateCoordinator[BoardData]):
             services = response.services
         else:
             services = []
-        slots = [
-            _slot_from_lineup(svc)
-            for svc in services
-            if isinstance(svc, NetworkRailLocationLineUp)
-        ]
+        slots = [_slot_from_lineup(svc) for svc in services]
         slots = slots[: self.slot_count]
         next_slot = slots[0] if slots else None
         next_delay = next_slot.delay if next_slot is not None else None

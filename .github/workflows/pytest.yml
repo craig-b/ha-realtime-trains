@@ -51,6 +51,7 @@ jobs:
       - name: Run pytest (HA-dependent integration tests)
         env:
           PYTHONPATH: homeassistant-core:${{ github.workspace }}
+          CI: "1"
         run: |
           cd homeassistant-core
           pytest \
@@ -70,6 +71,7 @@ jobs:
         env:
           RTT_TOKEN: ${{ secrets.RTT_TOKEN }}
           PYTHONPATH: ${{ github.workspace }}
+          CI: "1"
         run: |
           pytest tests/test_live_api.py -v \
             --junitxml="$GITHUB_WORKSPACE/live-junit.xml" \

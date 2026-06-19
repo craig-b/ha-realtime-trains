@@ -112,23 +112,28 @@ class RealtimeTrainsConfigFlow(ConfigFlow, domain=DOMAIN):
     VERSION = 1
     MINOR_VERSION = 1
 
+    def __init__(self) -> None:
+        """Initialise flow state — holds the validated ApiInfo between steps."""
+        self._info: ApiInfo | None = None
+
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
         """First step: collect API token and validate against /api/info."""
         errors: dict[str, str] = {}
         if user_input is not None:
-            _info, _client, err = await _validate_token(
+            info, _client, err = await _validate_token(
                 self.hass, user_input[CONF_TOKEN]
             )
             if err is None:
                 unique_id = _unique_id_for_token(user_input[CONF_TOKEN])
                 await self.async_set_unique_id(unique_id)
                 self._abort_if_unique_id_configured()
-                return self.async_create_entry(
-                    title="Realtime Trains",
-                    data=user_input,
-                )
+                self._info = info
+                # Stash the user-supplied data so the confirmation step
+                # can persist it without re-prompting.
+                self._token_data = user_input
+                return await self.async_step_confirm()
             errors["base"] = err
 
         return self.async_show_form(
@@ -137,6 +142,31 @@ class RealtimeTrainsConfigFlow(ConfigFlow, domain=DOMAIN):
                 _USER_SCHEMA, suggested_values=user_input
             ),
             errors=errors,
+        )
+
+    async def async_step_confirm(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Second step: confirm the key's entitlements before creating the entry."""
+        if user_input is not None:
+            return self.async_create_entry(
+                title="Realtime Trains",
+                data=self._token_data,
+            )
+
+        info = self._info
+        creds = info.credentials if info is not None else None
+        return self.async_show_form(
+            step_id="confirm",
+            description_placeholders={
+                "entitlements": ", ".join(creds.entitlements) if creds else "—",
+                "namespaces": ", ".join(creds.namespaces_available or [])
+                if creds
+                else "—",
+                "history_lookback_days": str(
+                    creds.history_restrict_to_days if creds else "—"
+                ),
+            },
         )
 
     async def async_step_reconfigure(

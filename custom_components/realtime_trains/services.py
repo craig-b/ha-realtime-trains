@@ -137,6 +137,7 @@ _GET_SERVICE_SCHEMA = vol.Schema(
 
 _FIND_STATION_SCHEMA = vol.Schema(
     {
+        vol.Optional(ATTR_CONFIG_ENTRY_ID): ConfigEntrySelector(),
         vol.Optional(FIELD_QUERY): str,
         vol.Optional(FIELD_NAMESPACE): str,
         vol.Optional(FIELD_LIMIT, default=DEFAULT_FIND_LIMIT): vol.All(
@@ -426,7 +427,13 @@ async def _async_refresh_now(call: ServiceCall) -> ServiceResponse:
             translation_placeholders={"subentry_id": subentry_id},
         )
 
-    await coordinator.async_request_refresh()
+    # Use ``_async_update_data`` directly rather than ``async_request_refresh``
+    # so the service actually awaits the next poll and surfaces any error.
+    try:
+        await coordinator._async_update_data()  # noqa: SLF001
+    except Exception as err:  # noqa: BLE001
+        _raise_for(err)
+        return None  # pragma: no cover
     return {"ok": True}
 
 

@@ -2,6 +2,7 @@
   "entity": {
     "sensor": {
       "next_departure": {"default": "mdi:train"},
+      "departure_1": {"default": "mdi:train"},
       "departure_2": {"default": "mdi:train"},
       "departure_3": {"default": "mdi:train"},
       "departure_4": {"default": "mdi:train"},
@@ -10,7 +11,6 @@
       "departure_7": {"default": "mdi:train"},
       "departure_8": {"default": "mdi:train"},
       "departure_9": {"default": "mdi:train"},
-      "departure_10": {"default": "mdi:train"},
       "delay": {"default": "mdi:timer-sand"},
       "live_status": {"default": "mdi:state-machine"},
       "service_departure": {"default": "mdi:train"},

@@ -138,6 +138,16 @@ class RealtimeTrainsApi:
         """Lower-cased headers from the most recent response."""
         return self._last_response_headers
 
+    @property
+    def is_refresh_token(self) -> bool | None:
+        """Whether the supplied token was classified as a refresh token.
+
+        ``None`` until the first /api/info call has classified the token;
+        ``True`` if the token requires a /api/get_access_token exchange
+        before each API call; ``False`` if it is a long-life access token.
+        """
+        return self._is_refresh_token
+
     # --- Auth & request helpers -------------------------------------------
 
     async def _bearer_token(self) -> str:

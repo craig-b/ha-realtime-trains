@@ -11,7 +11,6 @@ from unittest.mock import MagicMock
 import pytest
 
 pytest.importorskip("homeassistant")
-
 from homeassistant.exceptions import ServiceValidationError
 
 from custom_components.realtime_trains.api import (

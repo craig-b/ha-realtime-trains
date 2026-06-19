@@ -18,32 +18,32 @@
       "api_version": {
         "name": "API version"
       },
-      "departure_10": {
-        "name": "10th departure"
-      },
-      "departure_2": {
+      "departure_1": {
         "name": "2nd departure"
       },
-      "departure_3": {
+      "departure_2": {
         "name": "3rd departure"
       },
-      "departure_4": {
+      "departure_3": {
         "name": "4th departure"
       },
-      "departure_5": {
+      "departure_4": {
         "name": "5th departure"
       },
-      "departure_6": {
+      "departure_5": {
         "name": "6th departure"
       },
-      "departure_7": {
+      "departure_6": {
         "name": "7th departure"
       },
-      "departure_8": {
+      "departure_7": {
         "name": "8th departure"
       },
-      "departure_9": {
+      "departure_8": {
         "name": "9th departure"
+      },
+      "departure_9": {
+        "name": "10th departure"
       },
       "delay": {
         "name": "Delay"
@@ -178,6 +178,10 @@
         "data": {
           "token": "New API token"
         }
+      },
+      "confirm": {
+        "title": "Confirm account",
+        "description": "Your token is valid.\n\n**Entitlements:** {entitlements}\n\n**Namespaces:** {namespaces}\n\n**History lookback (days):** {history_lookback_days}\n\nSelect *Submit* to create the account, or *Back* to use a different token."
       }
     },
     "error": {

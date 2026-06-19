@@ -8,11 +8,11 @@ from unittest.mock import AsyncMock, patch
 import pytest
 
 pytest.importorskip("homeassistant")
-
 from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResultType
 
 from custom_components.realtime_trains.const import CONF_TOKEN, DOMAIN
+from custom_components.realtime_trains.models import ApiInfo
 
 # --- Config account flow ----------------------------------------------------
 
@@ -25,7 +25,6 @@ async def test_user_flow_creates_entry_with_token(hass: HomeAssistant) -> None:
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "user"
 
-    from custom_components.realtime_trains.models import ApiInfo
 
     with (
         patch(

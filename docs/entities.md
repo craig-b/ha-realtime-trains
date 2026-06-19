@@ -39,15 +39,15 @@ The next service's departure as a timestamp sensor. Shows the **advertised** tim
 | platform_actual | string \| null | Actual or forecast platform once known. |
 | delay | int | Delay in minutes (signed; negative = early). |
 | status | string | Live status enum, see `live_status` below. |
-| cancellation_reason | string \| null | Short text from the reason code, if cancelled. |
-| delay_reason | string \| null | Short text from the reason code, if delayed. |
+| cancellation_reason | string \| null | Cancellation reason code, if cancelled at this location. |
+| delay_reason | string \| null | Delay reason code, if delayed and detailed mode is enabled. |
 | stp | string | STP indicator — `WTT`, `VAR`, `STP`, `CAN`, `VST`, `VVR`, `VCN`. Detailed mode only. |
 | unique_identity | string | Full RTT unique ID (e.g. `gb-nr:L01525:2025-10-26`). |
 | namespace | string | Operating namespace, e.g. `gb-nr`. |
 | mode | string | `TRAIN`, `SHIP`, `BUS`, `SCHEDULED_BUS`, `REPLACEMENT_BUS`. |
 | in_passenger_service | bool | Whether the service is currently in passenger service. |
-| onboard_facilities | list[string] \| null | Know-Your-Train facilities (wifi, power, quiet, …). Requires `allowKnowYourTrain`. |
-| formation | list[dict] \| null | Rolling-stock formation, see [Formation attributes](#formation-attributes). Requires `allowAllocations`. |
+| onboard_facilities | list[string] \| null | Always `null` on a board entity — only populated via the service-tracker flow (requires `allowKnowYourTrain`). |
+| formation | list[dict] \| null | Always `null` on a board entity — only populated via the service-tracker flow (requires `allowAllocations`). See [Formation attributes](#formation-attributes). |
 
 ### `sensor.<station>_departure_2` … `_departure_N`
 
@@ -67,21 +67,16 @@ Binary sensor. `on` if the next departure's `platform_actual` differs from `plat
 
 ### `sensor.<station>_live_status`
 
-Enum sensor mirroring the RTT `LocationStatus` field, normalised for display:
+Enum sensor mirroring the RTT `LocationStatus` field, normalised to lowercase:
 
 | State | When |
 |---|---|
-| `scheduled` | No realtime data yet. Train is in the timetable window but has not reported. |
 | `approaching` | Train is approaching the location. |
 | `arriving` | Train is arriving at the platform. |
 | `at_platform` | Train is stopped at the platform. |
 | `depart_preparing` | Train is preparing to depart. |
 | `depart_ready` | Train is ready to depart. |
 | `departing` | Train is leaving the platform. |
-| `cancelled` | The service is cancelled at this location. |
-| `diverted` | The service has been diverted away from this location. |
-| `terminated` | The service now terminates at this location (altered). |
-| `starts` | The service now starts from this location (altered). |
 
 This is the single most automation-friendly sensor — a state change to `at_platform` means "the train is here now".
 

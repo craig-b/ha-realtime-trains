@@ -81,6 +81,11 @@ get_service:
 
 find_station:
   fields:
+    config_entry_id:
+      required: false
+      selector:
+        config_entry:
+          integration: realtime_trains
     query:
       required: false
       example: "Clapham"
