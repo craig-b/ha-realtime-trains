@@ -25,7 +25,6 @@ async def test_user_flow_creates_entry_with_token(hass: HomeAssistant) -> None:
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "user"
 
-
     with (
         patch(
             "custom_components.realtime_trains.api.RealtimeTrainsApi.async_get_info",

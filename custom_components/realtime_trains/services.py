@@ -109,8 +109,10 @@ _GET_DEPARTURES_SCHEMA = vol.Schema(
         vol.Required(ATTR_CONFIG_ENTRY_ID): ConfigEntrySelector(),
         vol.Required(FIELD_STATION): TextSelector(TextSelectorConfig(multiple=False)),
         vol.Optional(FIELD_TIME_FROM): _datetime_selector(),
-        vol.Optional(FIELD_TIME_TO): _datetime_selector(),
-        vol.Optional(FIELD_TIME_WINDOW, default=DEFAULT_TIME_WINDOW): vol.All(
+        vol.Exclusive(FIELD_TIME_TO, "time_window"): _datetime_selector(),
+        vol.Exclusive(
+            FIELD_TIME_WINDOW, "time_window", default=DEFAULT_TIME_WINDOW
+        ): vol.All(
             vol.Coerce(int),
             vol.Range(min=MIN_TIME_WINDOW, max=MAX_TIME_WINDOW),
         ),
@@ -268,6 +270,9 @@ async def _async_get_departures(call: ServiceCall) -> ServiceResponse:
 
     time_from = _coerce_dt(call.data.get(FIELD_TIME_FROM))
     time_to = _coerce_dt(call.data.get(FIELD_TIME_TO))
+    time_window = call.data.get(FIELD_TIME_WINDOW)
+    if time_to is not None:
+        time_window = None
     if time_from is not None and time_to is not None:
         delta = (time_to - time_from).total_seconds()
         if delta > MAX_QUERY_WINDOW_MINUTES * 60:
@@ -284,7 +289,7 @@ async def _async_get_departures(call: ServiceCall) -> ServiceResponse:
             filter_to=call.data.get(FIELD_FILTER_TO),
             time_from=time_from,
             time_to=time_to,
-            time_window=int(call.data[FIELD_TIME_WINDOW]),
+            time_window=int(time_window) if time_window is not None else None,
             detailed=call.data[FIELD_DETAILED] or None,
             namespace=namespace,
         )
@@ -471,6 +476,11 @@ def _lineup_to_dict(
         if metadata is not None and metadata.platform is not None
         else None
     )
+    platform_actual = (
+        metadata.platform.actual
+        if metadata is not None and metadata.platform is not None
+        else None
+    )
     td = svc.temporal_data
     departure_dt = (
         td.departure.schedule_advertised
@@ -482,6 +492,24 @@ def _lineup_to_dict(
         if td is not None and td.arrival is not None
         else None
     )
+    delay = (
+        td.departure.realtime_advertised_lateness
+        if td is not None and td.departure is not None
+        else None
+    )
+    is_cancelled = (
+        td.departure.is_cancelled
+        if td is not None and td.departure is not None
+        else None
+    )
+    live_status = (
+        str(td.status).lower() if td is not None and td.status is not None else None
+    )
+    uid = sched.unique_identity if sched else None
+    ns = sched.namespace if sched else None
+    mode = (
+        str(sched.mode_type).lower() if sched and sched.mode_type is not None else None
+    )
     return _strip_none(
         {
             "headcode": headcode,
@@ -489,9 +517,16 @@ def _lineup_to_dict(
             "destination": _first_location_description(svc.destination),
             "departure": _iso(departure_dt),
             "arrival": _iso(arrival_dt),
+            "delay": delay,
             "platform_planned": platform_planned,
+            "platform_actual": platform_actual,
+            "is_cancelled": is_cancelled,
+            "live_status": live_status,
             "operator_code": operator.code if operator else None,
             "operator_name": operator.name if operator else None,
+            "unique_identity": uid,
+            "namespace": ns,
+            "mode": mode,
         }
     )
 
@@ -580,9 +615,11 @@ def _coerce_dt(value: Any) -> datetime | None:
 
 @callback
 def async_setup_services(hass: HomeAssistant) -> None:
-    """Register all realtime_trains services. Idempotent across reloads."""
-    if hass.data.get(DOMAIN, {}).get("services_registered"):
-        return
+    """Register all realtime_trains services.
+
+    ``hass.services.async_register`` is idempotent — re-registering on
+    reload just replaces the handler, so no manual guard is needed.
+    """
     hass.services.async_register(
         DOMAIN,
         SERVICE_GET_DEPARTURES,
@@ -611,4 +648,3 @@ def async_setup_services(hass: HomeAssistant) -> None:
         schema=_REFRESH_NOW_SCHEMA,
         supports_response=SupportsResponse.OPTIONAL,
     )
-    hass.data.setdefault(DOMAIN, {})["services_registered"] = True

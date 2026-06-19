@@ -249,6 +249,13 @@ class DepartureBoardSubentryFlow(ConfigSubentryFlow):
 # --- Service tracker -------------------------------------------------------
 
 
+def _today_str() -> str:
+    """Return today's date as an ISO 8601 string for the date selector default."""
+    from datetime import UTC, datetime  # noqa: PLC0415
+
+    return datetime.now(UTC).date().isoformat()
+
+
 _SERVICE_STEP1_SCHEMA = vol.Schema(
     {
         vol.Optional(CONF_UNIQUE_IDENTITY): TextSelector(
@@ -257,7 +264,7 @@ _SERVICE_STEP1_SCHEMA = vol.Schema(
         vol.Optional(CONF_HEADCODE): TextSelector(
             TextSelectorConfig(type=TextSelectorType.TEXT)
         ),
-        vol.Optional(CONF_DATE): DateSelector(),
+        vol.Optional(CONF_DATE, default=_today_str): DateSelector(),
     }
 )
 

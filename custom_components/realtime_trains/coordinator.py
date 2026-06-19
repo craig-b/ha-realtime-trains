@@ -69,6 +69,8 @@ from .models import (
     NetworkRailLocationLineUp,
     NetworkRailLocationLineUpResponse,
     NetworkRailServiceDetail,
+    ReasonBlock,
+    ReasonType,
     Stop,
 )
 
@@ -284,6 +286,25 @@ class BoardData:
     namespace: str | None
 
 
+def _resolve_reason(
+    reasons: list[ReasonBlock],
+    reason_type: ReasonType,
+    fallback_code: str | None,
+) -> str | None:
+    """Resolve a reason code to its human-readable short_text.
+
+    The ``reasons`` list on a line-up entry carries both delay and
+    cancellation reasons. Each has a ``code`` and a ``short_text``;
+    we prefer the short_text but fall back to the raw code (from the
+    temporal-data ``cancellation_reason_code`` field) if no matching
+    reason block exists.
+    """
+    for reason in reasons:
+        if reason.type == reason_type:
+            return reason.short_text or reason.code or fallback_code
+    return fallback_code
+
+
 def _slot_from_lineup(
     svc: NetworkRailLocationLineUp | LocationLineUp,
 ) -> DepartureSlot:
@@ -302,6 +323,7 @@ def _slot_from_lineup(
     display_as: LocationDisplayAs | None = None
     is_cancelled: bool | None = None
     cancellation_reason: str | None = None
+    delay_reason: str | None = None
     if td is not None:
         if td.departure is not None:
             planned_dept = td.departure.schedule_advertised
@@ -316,6 +338,12 @@ def _slot_from_lineup(
                 cancellation_reason = td.departure.cancellation_reason_code
         live_status = td.status
         display_as = td.display_as
+    # Resolve reason codes to human-readable short_text via the reasons
+    # block on the line-up entry (svc.reasons is list[ReasonBlock]).
+    cancellation_reason = _resolve_reason(
+        svc.reasons, ReasonType.CANCEL, cancellation_reason
+    )
+    delay_reason = _resolve_reason(svc.reasons, ReasonType.DELAY, None)
     platform_planned: str | None = None
     platform_actual: str | None = None
     stock_branding: str | None = None
@@ -369,7 +397,7 @@ def _slot_from_lineup(
         display_as=display_as,
         is_cancelled=is_cancelled,
         cancellation_reason=cancellation_reason,
-        delay_reason=None,
+        delay_reason=delay_reason,
         stp_indicator=stp,
         unique_identity=uid,
         namespace=ns,

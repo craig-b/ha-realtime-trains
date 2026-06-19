@@ -125,7 +125,7 @@ Attached to `sensor.<headcode>_<date>_departure` when `allowAllocations` is set 
 |---|---|---|
 | leading_class | string | e.g. `444`. |
 | passenger_vehicles | int | Count of passenger-carrying vehicles. |
-| allocations | list[dict] | One entry per allocation segment, each with `attached`/`detached` location pair, `allocation_index`, and `allocation_items`. |
+| allocations | list[dict] | One entry per allocation segment, each with `allocation_index`, `leading_class`, `passenger_vehicles`, `allocation_items`, and `know_your_train_data`. |
 | stock_branding | string \| null | Branding of the stock where relevant. |
 | know_your_train | dict \| null | Per-coach detail, if `allowKnowYourTrain`. See below. |
 
@@ -161,17 +161,17 @@ These diagnostic-category sensors live on the account device and reflect the mos
 
 | Entity | Class | Description |
 |---|---|---|
-| `sensor.rtt_rate_limit_minute` | number | `X-RateLimit-Limit-Minute`. |
-| `sensor.rtt_rate_limit_remaining_minute` | number | `X-RateLimit-Remaining-Minute`. |
-| `sensor.rtt_rate_limit_hour` | number | Hour-dimension limit. |
-| `sensor.rtt_rate_limit_remaining_hour` | number | Hour-dimension remaining. |
-| `sensor.rtt_rate_limit_day` | number | Day-dimension limit. |
-| `sensor.rtt_rate_limit_remaining_day` | number | Day-dimension remaining. |
-| `sensor.rtt_rate_limit_week` | number | Week-dimension limit. |
-| `sensor.rtt_rate_limit_remaining_week` | number | Week-dimension remaining. |
-| `sensor.rtt_api_version` | string | Current API version reported by `/api/info` (e.g. `2026-01-18`). |
-| `binary_sensor.rtt_history_restricted` | binary | `on` if your token has `historyRestriction: true`. |
-| `binary_sensor.rtt_namespace_restricted` | binary | `on` if your token has `namespaceRestriction: true`. |
-| `sensor.rtt_entitlements` | string | Comma-separated list of your entitlements, e.g. `allowDetailed, allowAllocations`. |
+| `sensor.realtime_trains_rate_limit_minute` | number | `X-RateLimit-Limit-Minute`. |
+| `sensor.realtime_trains_rate_limit_remaining_minute` | number | `X-RateLimit-Remaining-Minute`. |
+| `sensor.realtime_trains_rate_limit_hour` | number | Hour-dimension limit. |
+| `sensor.realtime_trains_rate_limit_remaining_hour` | number | Hour-dimension remaining. |
+| `sensor.realtime_trains_rate_limit_day` | number | Day-dimension limit. |
+| `sensor.realtime_trains_rate_limit_remaining_day` | number | Day-dimension remaining. |
+| `sensor.realtime_trains_rate_limit_week` | number | Week-dimension limit. |
+| `sensor.realtime_trains_rate_limit_remaining_week` | number | Week-dimension remaining. |
+| `sensor.realtime_trains_api_version` | string | Current API version reported by `/api/info` (e.g. `2026-01-18`). |
+| `binary_sensor.realtime_trains_history_restricted` | binary | `on` if your token has `historyRestriction: true`. |
+| `binary_sensor.realtime_trains_namespace_restricted` | binary | `on` if your token has `namespaceRestriction: true`. |
+| `sensor.realtime_trains_entitlements` | string | Comma-separated list of your entitlements, e.g. `allowDetailed, allowAllocations`. |
 
 Diagnostic entities are excluded from the recorder by default; they exist for dashboards and troubleshooting.

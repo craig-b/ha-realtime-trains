@@ -62,6 +62,3 @@ ENTITLEMENT_DETAILED = "allowDetailed"
 ENTITLEMENT_ALLOCATIONS = "allowAllocations"
 ENTITLEMENT_KNOW_YOUR_TRAIN = "allowKnowYourTrain"
 ENTITLEMENT_FULL_ALLOCATION_LISTING = "allowFullAllocationListing"
-
-# Platforms exposed by the integration.
-PLATFORMS = []

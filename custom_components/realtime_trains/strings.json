@@ -89,6 +89,9 @@
       },
       "service_live_status": {
         "name": "Live status"
+      },
+      "entitlements": {
+        "name": "Entitlements"
       }
     }
   },

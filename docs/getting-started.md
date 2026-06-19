@@ -64,7 +64,7 @@ From the Realtime Trains device page → *Add service tracker*.
 | Date | The departure date of the service from its planned origin. Defaults to today. |
 | Unique identity | Optional alternative — the full `namespace:identity:date` string. |
 
-The service tracker is single-shot by default (fetch on setup, then hourly refresh) but switches to faster polling once the service is live.
+The service tracker polls every 15 minutes by default while the service is scheduled but not yet running, switches to every 30 seconds once the service is in run, and drops to hourly once it completes or is cancelled.
 
 ## 5. Use it
 

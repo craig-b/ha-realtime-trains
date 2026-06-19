@@ -296,6 +296,15 @@ def _account_namespace_restricted(
     return coordinator.data.api_info.credentials.namespace_restriction
 
 
+def _account_entitlements(
+    coordinator: RealtimeTrainsAccountCoordinator,
+) -> StateType:
+    if coordinator.data is None or coordinator.data.api_info is None:
+        return None
+    ents = coordinator.data.api_info.credentials.entitlements
+    return ", ".join(ents) if ents else None
+
+
 # Dimensions: minute / hour / day / week — each yields a limit + remaining sensor.
 ACCOUNT_SENSOR_DESCRIPTIONS: tuple[AccountSensorEntityDescription, ...] = (
     tuple(
@@ -332,6 +341,12 @@ ACCOUNT_SENSOR_DESCRIPTIONS: tuple[AccountSensorEntityDescription, ...] = (
             translation_key="api_version",
             entity_category=EntityCategory.DIAGNOSTIC,
             value_fn=_account_api_version,
+        ),
+        AccountSensorEntityDescription(
+            key="entitlements",
+            translation_key="entitlements",
+            entity_category=EntityCategory.DIAGNOSTIC,
+            value_fn=_account_entitlements,
         ),
     )
 )
