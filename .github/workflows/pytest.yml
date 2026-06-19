@@ -53,10 +53,9 @@ jobs:
           PYTHONPATH: homeassistant-core:${{ github.workspace }}
           CI: "1"
         run: |
-          cd homeassistant-core
           pytest \
-            tests/components/realtime_trains/ \
-            "$PWD/../tests/" \
+            tests/ \
+            -m 'not live' \
             -ra \
             --junitxml="$GITHUB_WORKSPACE/integration-junit.xml" \
             --cov=custom_components.realtime_trains \
