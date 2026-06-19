@@ -53,7 +53,9 @@ jobs:
           # - strict-typing: core integrations must be listed in
           #   .strict-typing; custom integrations run mypy via CI instead.
           ERRORS=$(grep -E '^\* \[ERROR\]' /tmp/hassfest.txt \
-            | grep -v 'MANIFEST' \
+            | grep -v 'MANIFEST.*documentation' \
+            | grep -v 'MANIFEST.*issue_tracker' \
+            | grep -v 'MANIFEST.*version' \
             | grep -v 'CODEOWNERS' \
             | grep -v 'CONFIG_FLOW' \
             | grep -v 'integrations.json' \
