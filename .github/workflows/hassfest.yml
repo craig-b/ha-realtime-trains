@@ -45,12 +45,39 @@ jobs:
         run: |
           cd homeassistant-core
           python -m script.hassfest --integration realtime_trains
+        continue-on-error: true
+        id: hassfest
+
+      - name: Run mypy (strict typing)
+        run: |
+          cd homeassistant-core
+          mypy homeassistant/components/realtime_trains/ \
+            --strict \
+            --ignore-missing-imports \
+            --enable-incomplete-feature=PEP695
+        continue-on-error: true
+        id: mypy
 
       - name: Summary
         if: always()
         run: |
           {
-            echo "## hassfest"
+            echo "## hassfest + mypy"
             echo ""
-            echo "✅ Manifest, strings.json, services.yaml, icons.json all valid against HA's plugin discovery rules."
+            if [ "${{ steps.hassfest.outcome == 'success' }}" = "true" ]; then
+              echo "- ✅ hassfest — manifest, strings.json, services.yaml, icons.json valid"
+            else
+              echo "- ❌ hassfest — see output above"
+            fi
+            if [ "${{ steps.mypy.outcome == 'success' }}" = "true" ]; then
+              echo "- ✅ mypy strict typing — no errors"
+            else
+              echo "- ❌ mypy strict typing — see output above"
+            fi
           } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Fail job if any check failed
+        if: ${{ steps.hassfest.outcome == 'failure' || steps.mypy.outcome == 'failure' }}
+        run: |
+          echo "::error::hassfest or mypy failed — see annotations above."
+          exit 1

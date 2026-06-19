@@ -1,0 +1,57 @@
+name: release
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Read version from manifest.json
+        id: manifest
+        run: |
+          VERSION=$(python -c "import json; print(json.load(open('custom_components/realtime_trains/manifest.json'))['version'])")
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Manifest version: $VERSION"
+
+      - name: Verify tag matches manifest version
+        run: |
+          TAG="${GITHUB_REF#refs/tags/v}"
+          MANIFEST_VERSION="${{ steps.manifest.outputs.version }}"
+          echo "Tag (without v prefix): $TAG"
+          echo "Manifest version: $MANIFEST_VERSION"
+          if [ "$TAG" != "$MANIFEST_VERSION" ]; then
+            echo "::error::Tag 'v$TAG' does not match manifest.json version '$MANIFEST_VERSION'."
+            echo "::error::Update manifest.json version to '$TAG' and re-tag, or fix the tag."
+            exit 1
+          fi
+          echo "✅ Tag and manifest version match: $MANIFEST_VERSION"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: v${{ steps.manifest.outputs.version }}
+          generate_release_notes: true
+          draft: false
+          prerelease: ${{ contains(steps.manifest.outputs.version, '-') }}
+          body: |
+            ## Realtime Trains v${{ steps.manifest.outputs.version }}
+
+            ### Install via HACS
+
+            1. Add this repository as a custom repository in HACS (category: Integration)
+            2. Search for "Realtime Trains"
+            3. Install
+            4. Restart Home Assistant
+            5. Add the integration via Settings → Devices → Add → "Realtime Trains"
+
+            ### What's new
+
+            See the changelog below for full details.
