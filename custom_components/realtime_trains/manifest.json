@@ -7,7 +7,7 @@
   "issue_tracker": "https://github.com/craig/ha-realtime-trains/issues",
   "integration_type": "service",
   "iot_class": "cloud_polling",
-  "quality_scale": "silver",
+  "quality_scale": "platinum",
   "loggers": ["custom_components.realtime_trains"],
   "requirements": [],
   "version": "0.1.0"
