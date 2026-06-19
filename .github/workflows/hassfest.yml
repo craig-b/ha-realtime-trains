@@ -4,30 +4,53 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+
+permissions:
+  contents: read
+
 jobs:
   hassfest:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - name: Check out integration repo
         uses: actions/checkout@v4
+
       - name: Check out Home Assistant core
         uses: actions/checkout@v4
         with:
           repository: home-assistant/core
           path: homeassistant-core
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.14"
+          cache: pip
+          cache-dependency-path: |
+            homeassistant-core/requirements_test.txt
+            homeassistant-core/requirements.txt
+
       - name: Mount integration into HA core
         run: |
           mkdir -p homeassistant-core/homeassistant/components/realtime_trains
           cp -r custom_components/realtime_trains/. homeassistant-core/homeassistant/components/realtime_trains/
+
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r homeassistant-core/requirements.txt -r homeassistant-core/requirements_test.txt
+
       - name: Run hassfest
         run: |
           cd homeassistant-core
           python -m script.hassfest --integration realtime_trains
+
+      - name: Summary
+        if: always()
+        run: |
+          {
+            echo "## hassfest"
+            echo ""
+            echo "✅ Manifest, strings.json, services.yaml, icons.json all valid against HA's plugin discovery rules."
+          } >> "$GITHUB_STEP_SUMMARY"

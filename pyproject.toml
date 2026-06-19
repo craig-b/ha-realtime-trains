@@ -20,11 +20,17 @@ test = [
   "pytest>=9.0",
   "pytest-asyncio>=1.4",
   "aiohttp>=3.13",
+  "pytest-cov>=6.0",
 ]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
+markers = [
+  "live: tests that hit the live RTT API (require RTT_TOKEN env var)",
+  "integration: tests that require Home Assistant to be importable",
+]
+addopts = "--strict-markers --ignore=tests/test_live_api.py"
 
 [tool.setuptools]
 packages = ["custom_components"]
@@ -171,6 +177,7 @@ split-on-trailing-comma = false
   "PYI034",
   "PYI036",
   "INP001",
+  "T201",
 ]
 "scripts/*" = ["T201", "T20", "INP001"]
 

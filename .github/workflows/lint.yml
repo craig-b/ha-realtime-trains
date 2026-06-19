@@ -4,18 +4,75 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+
+permissions:
+  contents: read
+  checks: write
+  pull-requests: write
+
 jobs:
   lint:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.14"
+          cache: pip
+          cache-dependency-path: pyproject.toml
+
       - name: Install ruff
         run: pip install ruff==0.15.14
-      - name: ruff check
-        run: ruff check custom_components/ tests/ scripts/
-      - name: ruff format --check
-        run: ruff format --check custom_components/ tests/ scripts/
+
+      - name: ruff check (with PR annotations)
+        run: |
+          ruff check \
+            --output-format=github \
+            custom_components/ tests/ scripts/
+        continue-on-error: true
+        id: ruff-check
+
+      - name: ruff format --check (with PR annotations)
+        run: |
+          ruff format --check \
+            custom_components/ tests/ scripts/
+        continue-on-error: true
+        id: ruff-format
+
+      - name: Summary
+        if: always()
+        run: |
+          {
+            echo "## Lint summary"
+            echo ""
+            check_ok="${{ steps.ruff-check.outcome == 'success' }}"
+            format_ok="${{ steps.ruff-format.outcome == 'success' }}"
+            if [ "$check_ok" = "true" ]; then
+              echo "- ✅ \`ruff check\` — no issues"
+            else
+              echo "- ❌ \`ruff check\` — see annotations above"
+            fi
+            if [ "$format_ok" = "true" ]; then
+              echo "- ✅ \`ruff format --check\` — already formatted"
+            else
+              echo "- ❌ \`ruff format --check\` — run \`ruff format custom_components/ tests/ scripts/\`"
+            fi
+            echo ""
+            if [ "$check_ok" != "true" ] || [ "$format_ok" != "true" ]; then
+              echo "To fix locally:"
+              echo ""
+              echo "  uv run --with ruff==0.15.14 ruff check --fix custom_components/ tests/ scripts/"
+              echo "  uv run --with ruff==0.15.14 ruff format custom_components/ tests/ scripts/"
+              echo ""
+              exit 1
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Fail job if any check failed
+        if: ${{ steps.ruff-check.outcome == 'failure' || steps.ruff-format.outcome == 'failure' }}
+        run: |
+          echo "::error::Lint failed — see annotations and the summary above."
+          exit 1
