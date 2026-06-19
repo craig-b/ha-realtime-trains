@@ -484,7 +484,10 @@ class RealtimeTrainsApi:
                 params["identity"] = identity
             if departure_date is not None:
                 params["departureDate"] = departure_date
-            if namespace is not None:
+            # The generic /rtt/service endpoint accepts a namespace
+            # query param; /gb-nr/service does not (the namespace is
+            # baked into the path). Sending it there causes a 400.
+            if namespace is not None and namespace != "gb-nr":
                 params["namespace"] = namespace
 
         data = await self._request("GET", path, params=params, allow_404=True)
