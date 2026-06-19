@@ -141,7 +141,6 @@ jobs:
               echo "_Live tests did not produce output._"
             fi
           } >> "$GITHUB_STEP_SUMMARY"
-        if_no_files_exist: ignore
 
       - name: Annotate PR with failed tests
         if: always() && github.event_name == 'pull_request' && (steps.integration-tests.outcome == 'failure' || steps.live-tests.outcome == 'failure')

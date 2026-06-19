@@ -22,14 +22,8 @@ from datetime import UTC, datetime
 import logging
 from typing import Any
 
-from homeassistant.const import ATTR_CONFIG_ENTRY_ID, ATTR_DEVICE_ID, CONF_DATE
-from homeassistant.core import (
-    HomeAssistant,
-    ServiceCall,
-    ServiceResponse,
-    SupportsResponse,
-    callback,
-)
+from homeassistant.const import ATTR_CONFIG_ENTRY_ID, ATTR_DEVICE_ID
+from homeassistant.core import HomeAssistant, ServiceCall, SupportsResponse, callback
 from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
 from homeassistant.helpers import device_registry as dr, service
 from homeassistant.helpers.selector import (
@@ -74,6 +68,7 @@ from .models import (
 _LOGGER = logging.getLogger(__name__)
 
 FIELD_UNIQUE_IDENTITY = "unique_identity"
+FIELD_DATE = "date"
 FIELD_HEADCODE = "headcode"
 FIELD_NAMESPACE = "namespace"
 FIELD_STATION = "station"
@@ -110,9 +105,7 @@ _GET_DEPARTURES_SCHEMA = vol.Schema(
         vol.Required(FIELD_STATION): TextSelector(TextSelectorConfig(multiple=False)),
         vol.Optional(FIELD_TIME_FROM): _datetime_selector(),
         vol.Exclusive(FIELD_TIME_TO, "time_window"): _datetime_selector(),
-        vol.Exclusive(
-            FIELD_TIME_WINDOW, "time_window", default=DEFAULT_TIME_WINDOW
-        ): vol.All(
+        vol.Exclusive(FIELD_TIME_WINDOW, "time_window"): vol.All(
             vol.Coerce(int),
             vol.Range(min=MIN_TIME_WINDOW, max=MAX_TIME_WINDOW),
         ),
@@ -132,7 +125,7 @@ _GET_SERVICE_SCHEMA = vol.Schema(
         vol.Exclusive(FIELD_UNIQUE_IDENTITY, "service_id"): str,
         vol.Exclusive(FIELD_HEADCODE, "service_id"): str,
         vol.Optional(FIELD_NAMESPACE, default=DEFAULT_NAMESPACE): str,
-        vol.Optional(CONF_DATE): DateSelector(DateSelectorConfig()),
+        vol.Optional(FIELD_DATE): DateSelector(DateSelectorConfig()),
     }
 )
 
@@ -253,7 +246,7 @@ def _client(runtime_data: RealtimeTrainsRuntimeData) -> RealtimeTrainsApi:
 # --- Service handlers -------------------------------------------------------
 
 
-async def _async_get_departures(call: ServiceCall) -> ServiceResponse:
+async def _async_get_departures(call: ServiceCall) -> dict[str, Any] | None:
     """Fetch a departure board on demand for the chosen account."""
     hass = call.hass
     entry = _resolve_entry(hass, call)
@@ -273,6 +266,8 @@ async def _async_get_departures(call: ServiceCall) -> ServiceResponse:
     time_window = call.data.get(FIELD_TIME_WINDOW)
     if time_to is not None:
         time_window = None
+    elif time_window is None:
+        time_window = DEFAULT_TIME_WINDOW
     if time_from is not None and time_to is not None:
         delta = (time_to - time_from).total_seconds()
         if delta > MAX_QUERY_WINDOW_MINUTES * 60:
@@ -313,7 +308,7 @@ async def _async_get_departures(call: ServiceCall) -> ServiceResponse:
     return {"services": payload, "query": _strip_none(query_block)}
 
 
-async def _async_get_service(call: ServiceCall) -> ServiceResponse:
+async def _async_get_service(call: ServiceCall) -> dict[str, Any] | None:
     """Fetch full detail for a single service."""
     entry = _resolve_entry(call.hass, call)
     runtime_data = _runtime(entry)
@@ -328,7 +323,7 @@ async def _async_get_service(call: ServiceCall) -> ServiceResponse:
             translation_domain=DOMAIN,
             translation_key="service_id_required",
         )
-    if headcode and not call.data.get(CONF_DATE):
+    if headcode and not call.data.get(FIELD_DATE):
         raise ServiceValidationError(
             translation_domain=DOMAIN,
             translation_key="date_required_with_headcode",
@@ -339,7 +334,7 @@ async def _async_get_service(call: ServiceCall) -> ServiceResponse:
             client.async_get_service,
             unique_identity,
             identity=headcode,
-            departure_date=call.data.get(CONF_DATE),
+            departure_date=call.data.get(FIELD_DATE),
             namespace=namespace,
         )
     except RttError as err:
@@ -352,7 +347,7 @@ async def _async_get_service(call: ServiceCall) -> ServiceResponse:
     return {"service": _service_to_dict(detail)}
 
 
-async def _async_find_station(call: ServiceCall) -> ServiceResponse:
+async def _async_find_station(call: ServiceCall) -> dict[str, Any] | None:
     """Search the cached RTT stops list without network I/O."""
     # find_station has no mandatory config_entry_id, but when supplied we
     # use that entry's account. Otherwise the first ready one.
@@ -381,7 +376,7 @@ async def _async_find_station(call: ServiceCall) -> ServiceResponse:
     return {"stops": results}
 
 
-async def _async_refresh_now(call: ServiceCall) -> ServiceResponse:
+async def _async_refresh_now(call: ServiceCall) -> dict[str, Any] | None:
     """Force an immediate refresh of one board or service tracker device."""
     device_id: str = call.data[ATTR_DEVICE_ID]
     registry = dr.async_get(call.hass)
@@ -462,7 +457,7 @@ async def _stops_from_any_account(hass: HomeAssistant) -> list[Stop]:
 
 def _lineup_to_dict(
     svc: LocationLineUp | NetworkRailLocationLineUp,
-) -> dict[str, Any]:
+) -> dict[str, Any] | None:
     """Reduce a line-up entry to a response dict.
 
     Mirrors the departure-slot attributes documented in docs/entities.md.
@@ -531,7 +526,7 @@ def _lineup_to_dict(
     )
 
 
-def _service_to_dict(detail: Any) -> dict[str, Any]:
+def _service_to_dict(detail: Any) -> dict[str, Any] | None:
     """Serialise a NetworkRailServiceDetail / ServiceDetail for the response."""
     return asdict(detail)
 
@@ -573,7 +568,7 @@ def _iso(dt: datetime | None) -> str | None:
     return dt.isoformat()
 
 
-def _strip_none(d: dict[str, Any]) -> dict[str, Any]:
+def _strip_none(d: dict[str, Any]) -> dict[str, Any] | None:
     return {k: v for k, v in d.items() if v is not None}
 
 

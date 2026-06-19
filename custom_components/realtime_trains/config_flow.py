@@ -142,6 +142,7 @@ class RealtimeTrainsConfigFlow(ConfigFlow, domain=DOMAIN):
                 _USER_SCHEMA, suggested_values=user_input
             ),
             errors=errors,
+            description_placeholders={"api_portal_url": "https://api-portal.rtt.io"},
         )
 
     async def async_step_confirm(
@@ -217,7 +218,6 @@ class RealtimeTrainsConfigFlow(ConfigFlow, domain=DOMAIN):
         # Use a stable id from whatever token is on the entry, if any.
         existing = self._get_reconfigure_entry()
         if existing:
-            self._reauth_entry_id = existing.entry_id
             return self.async_show_form(
                 step_id="reauth_confirm",
                 data_schema=_REAUTH_SCHEMA,

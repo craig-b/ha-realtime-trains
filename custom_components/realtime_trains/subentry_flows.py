@@ -25,6 +25,7 @@ from homeassistant.helpers.selector import (
     NumberSelector,
     NumberSelectorConfig,
     NumberSelectorMode,
+    SelectOptionDict,
     SelectSelector,
     SelectSelectorConfig,
     SelectSelectorMode,
@@ -115,7 +116,7 @@ _BOARD_STEP1_SCHEMA = vol.Schema(
 
 
 def _select_selector_for_stops(stops: list[Stop]) -> SelectSelector:
-    options = [
+    options: list[SelectOptionDict] = [
         {
             "label": (
                 f"{stop.description or stop.short_code or stop.unique_identity}"

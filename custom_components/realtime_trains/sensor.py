@@ -305,6 +305,17 @@ def _account_entitlements(
     return ", ".join(ents) if ents else None
 
 
+def _make_rate_limit_fn(
+    dim: str, field: str
+) -> Callable[[RealtimeTrainsAccountCoordinator], StateType]:
+    """Build a value_fn for one rate-limit dimension+field pair."""
+
+    def _fn(coord: RealtimeTrainsAccountCoordinator) -> StateType:
+        return _rate_limit_entry(coord.api.rate_limits, dim, field)
+
+    return _fn
+
+
 # Dimensions: minute / hour / day / week — each yields a limit + remaining sensor.
 ACCOUNT_SENSOR_DESCRIPTIONS: tuple[AccountSensorEntityDescription, ...] = (
     tuple(
@@ -313,11 +324,7 @@ ACCOUNT_SENSOR_DESCRIPTIONS: tuple[AccountSensorEntityDescription, ...] = (
             translation_key=f"rate_limit_{dim}",
             entity_category=EntityCategory.DIAGNOSTIC,
             state_class=SensorStateClass.MEASUREMENT,
-            value_fn=(
-                lambda coord, dim=dim: _rate_limit_entry(
-                    coord.api.rate_limits, dim, "limit"
-                )
-            ),
+            value_fn=_make_rate_limit_fn(dim, "limit"),
         )
         for dim in ("minute", "hour", "day", "week")
     )
@@ -327,11 +334,7 @@ ACCOUNT_SENSOR_DESCRIPTIONS: tuple[AccountSensorEntityDescription, ...] = (
             translation_key=f"rate_limit_remaining_{dim}",
             entity_category=EntityCategory.DIAGNOSTIC,
             state_class=SensorStateClass.MEASUREMENT,
-            value_fn=(
-                lambda coord, dim=dim: _rate_limit_entry(
-                    coord.api.rate_limits, dim, "remaining"
-                )
-            ),
+            value_fn=_make_rate_limit_fn(dim, "remaining"),
         )
         for dim in ("minute", "hour", "day", "week")
     )

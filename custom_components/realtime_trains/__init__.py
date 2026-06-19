@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import logging
 
+from homeassistant.config_entries import ConfigSubentry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryError, ConfigEntryNotReady
@@ -101,32 +102,32 @@ async def _build_subentry_coordinator(
     hass: HomeAssistant,
     entry: RealtimeTrainsConfigEntry,
     subentry_id: str,
-    subentry: object,
+    subentry: ConfigSubentry,
 ) -> object | None:
     """Construct the right coordinator for a subentry based on its type."""
     runtime_data: RealtimeTrainsRuntimeData = entry.runtime_data
     account = runtime_data.account
     subentry_type = getattr(subentry, "subentry_type", None)
     if subentry_type == SUBENTRY_TYPE_DEPARTURE_BOARD:
-        coordinator = RealtimeTrainsBoardCoordinator(
+        board_coordinator = RealtimeTrainsBoardCoordinator(
             hass,
             entry,
             subentry_id,
             subentry,
-            account,  # type: ignore[arg-type]
+            account,
         )
-        await coordinator.async_config_entry_first_refresh()
-        return coordinator
+        await board_coordinator.async_config_entry_first_refresh()
+        return board_coordinator
     if subentry_type == SUBENTRY_TYPE_SERVICE_TRACKER:
-        coordinator = RealtimeTrainsServiceTrackerCoordinator(
+        tracker_coordinator = RealtimeTrainsServiceTrackerCoordinator(
             hass,
             entry,
             subentry_id,
             subentry,
-            account,  # type: ignore[arg-type]
+            account,
         )
-        await coordinator.async_config_entry_first_refresh()
-        return coordinator
+        await tracker_coordinator.async_config_entry_first_refresh()
+        return tracker_coordinator
     _LOGGER.warning(
         "Unknown subentry type %s for %s; ignoring",
         subentry_type,

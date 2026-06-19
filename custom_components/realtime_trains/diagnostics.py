@@ -19,7 +19,6 @@ from dataclasses import asdict
 from typing import Any
 
 from homeassistant.components.diagnostics import async_redact_data
-from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_TOKEN
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.device_registry import DeviceEntry
@@ -85,7 +84,7 @@ async def async_get_config_entry_diagnostics(
 
 
 async def async_get_device_diagnostics(
-    hass: HomeAssistant, entry: ConfigEntry, device: DeviceEntry
+    hass: HomeAssistant, entry: RealtimeTrainsConfigEntry, device: DeviceEntry
 ) -> dict[str, Any]:
     """Return diagnostics for one board or service tracker device."""
     runtime_data: RealtimeTrainsRuntimeData | None = getattr(
