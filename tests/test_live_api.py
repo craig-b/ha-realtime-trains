@@ -232,11 +232,12 @@ async def test_get_location_with_filter_to(api_client: Any) -> None:
 
 
 async def test_get_service_for_a_known_headcode(api_client: Any) -> None:
-    """Fetch service detail for a headcode+date that should return a service.
+    """Fetch service detail for an identity+date from the live board.
 
     Queries the first service currently on the Clapham Junction board
-    and looks it up by its headcode; this guarantees a present-day
-    headcode + date that should exist.
+    and looks it up by its schedule identity (not the headcode — the
+    API's ``identity`` param is the running identity like ``W00001``,
+    not the train reporting identity like ``1L40``).
     """
     board = await api_client.async_get_location(
         "CLPHMJN", time_window=120, namespace="gb-nr"
@@ -246,11 +247,11 @@ async def test_get_service_for_a_known_headcode(api_client: Any) -> None:
 
     first = board.services[0]
     sm = first.schedule_metadata
-    if sm is None or sm.train_reporting_identity is None or sm.departure_date is None:
-        pytest.skip("first board service is missing headcode/date")
+    if sm is None or sm.identity is None or sm.departure_date is None:
+        pytest.skip("first board service is missing identity/date")
 
     detail = await api_client.async_get_service(
-        identity=sm.train_reporting_identity,
+        identity=sm.identity,
         departure_date=sm.departure_date,
         namespace="gb-nr",
     )
@@ -258,17 +259,17 @@ async def test_get_service_for_a_known_headcode(api_client: Any) -> None:
     assert detail.locations, "expected at least one location"
     assert detail.schedule_metadata is not None
     print(
-        f"  live service {sm.train_reporting_identity} {sm.departure_date} "
+        f"  live service {sm.identity} {sm.departure_date} "
         f"→ {len(detail.locations)} locations "
         f"uid={detail.schedule_metadata.unique_identity}"
     )
 
 
-async def test_get_service_with_invalid_headcode_raises_not_found(
+async def test_get_service_with_invalid_identity_raises_error(
     api_client: Any,
 ) -> None:
-    """A non-existent headcode raises RttNotFoundError."""
-    with pytest.raises(RttNotFoundError):
+    """A non-existent identity raises RttNotFoundError or RttBadRequestError."""
+    with pytest.raises((RttNotFoundError, _api.RttBadRequestError)):
         await api_client.async_get_service(
             identity="ZZ99",
             departure_date="2000-01-01",
@@ -310,10 +311,10 @@ async def test_real_service_has_consistent_locations_and_metadata(
         pytest.skip("no services on the WAT live board")
     first = board.services[0]
     sm = first.schedule_metadata
-    if sm is None or not all([sm.train_reporting_identity, sm.departure_date]):
+    if sm is None or not all([sm.identity, sm.departure_date]):
         pytest.skip("first WAT board service is missing fields")
     detail = await api_client.async_get_service(
-        identity=sm.train_reporting_identity,
+        identity=sm.identity,
         departure_date=sm.departure_date,
         namespace="gb-nr",
     )
