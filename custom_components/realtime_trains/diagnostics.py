@@ -168,7 +168,7 @@ def _subentry_id_from_device(device: DeviceEntry) -> str | None:
     return None
 
 
-def _redact(payload: dict[str, Any] | list[Any]) -> dict[str, Any] | list[Any]:
+def _redact(payload: Any) -> Any:
     """Recursively redact sensitive keys anywhere in a nested structure."""
     if isinstance(payload, dict):
         redacted = dict(payload)
