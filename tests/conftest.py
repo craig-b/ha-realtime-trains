@@ -13,7 +13,11 @@ Most test files are split into two flavours:
   any non-live test was skipped while the ``CI`` env var is set.
 
 The live-API tests (``test_live_api.py``) are the only ones allowed to
-skip — they need a real RTT token set via ``RTT_TOKEN``.
+skip — they need a real RTT token set via ``RTT_TOKEN``. They are
+deselected by default via ``-m 'not live'`` in ``pyproject.toml``; run
+them explicitly with::
+
+    RTT_TOKEN=xxxx uv run pytest tests/test_live_api.py -m live -v
 """
 
 from __future__ import annotations

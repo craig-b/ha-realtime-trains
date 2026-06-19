@@ -21,7 +21,6 @@ If ``RTT_TOKEN`` is not set, every test in this file is skipped.
 
 from __future__ import annotations
 
-import asyncio
 import importlib.util
 import os
 from pathlib import Path
@@ -99,7 +98,7 @@ LocationStatus = sys.modules["custom_components.realtime_trains.models"].Locatio
 
 
 @pytest.fixture
-def api_client() -> Any:
+async def api_client() -> Any:
     """Return a RealtimeTrainsApi wired to the live API with the env token."""
     pytest.importorskip("aiohttp")
     import aiohttp
@@ -114,17 +113,12 @@ def api_client() -> Any:
         api_version="2026-04-09",
     )
     yield client
-    asyncio.get_event_loop_policy()
-    asyncio.run(session.close())
+    await session.close()
 
 
 @pytest.fixture
-def http_session() -> Any:
-    """A bare aiohttp session that the test is responsible for closing.
-
-    Use this when the api_client fixture's auto-close is not what you
-    want (e.g. when issuing raw requests).
-    """
+async def http_session() -> Any:
+    """A bare aiohttp session for raw requests."""
     pytest.importorskip("aiohttp")
     import aiohttp
 
@@ -132,7 +126,7 @@ def http_session() -> Any:
         pytest.skip(_SKIP_REASON, allow_module_level=False)
     session = aiohttp.ClientSession()
     yield session
-    asyncio.run(session.close())
+    await session.close()
 
 
 # Skip the whole module gracefully if no token.

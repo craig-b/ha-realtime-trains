@@ -30,7 +30,7 @@ markers = [
   "live: tests that hit the live RTT API (require RTT_TOKEN env var)",
   "integration: tests that require Home Assistant to be importable",
 ]
-addopts = "--strict-markers --ignore=tests/test_live_api.py"
+addopts = "--strict-markers -m 'not live'"
 
 [tool.setuptools]
 packages = ["custom_components"]
