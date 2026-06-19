@@ -99,7 +99,12 @@ LocationStatus = sys.modules["custom_components.realtime_trains.models"].Locatio
 
 @pytest.fixture
 async def api_client() -> Any:
-    """Return a RealtimeTrainsApi wired to the live API with the env token."""
+    """Return a RealtimeTrainsApi wired to the live API with the env token.
+
+    The token is classified via ``/api/info`` before tests run so that
+    refresh-token mode is handled transparently — mirrors what the real
+    integration does in ``RealtimeTrainsAccountCoordinator``.
+    """
     pytest.importorskip("aiohttp")
     import aiohttp
 
@@ -112,6 +117,11 @@ async def api_client() -> Any:
         _API_KEY,
         api_version="2026-04-09",
     )
+    # Classify the token: if it's a refresh token, /api/info will
+    # trigger the access-token exchange. Without this, direct calls to
+    # /data/stops or /gb-nr/location would send the raw refresh token
+    # and get 401.
+    await client.async_get_info()
     yield client
     await session.close()
 
