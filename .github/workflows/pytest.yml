@@ -38,6 +38,7 @@ jobs:
           PYTHONPATH: ${{ github.workspace }}
           CI: "1"
         run: |
+          python -c "import custom_components.realtime_trains.const; print('import check OK')"
           pytest tests/ \
             -m 'not live' \
             -ra \
@@ -46,7 +47,9 @@ jobs:
             --junitxml=integration-junit.xml \
             --cov=custom_components.realtime_trains \
             --cov-report=xml:coverage-integration.xml \
-            --cov-report=term-missing:skip-covered
+            --cov-report=term-missing:skip-covered \
+            --tb=short
+        id: integration-tests
 
       - name: Run live-API integration tests (optional, requires RTT_TOKEN secret)
         if: vars.RTT_TOKEN != ''
