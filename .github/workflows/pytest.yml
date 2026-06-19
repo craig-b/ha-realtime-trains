@@ -18,52 +18,35 @@ jobs:
       - name: Check out integration repo
         uses: actions/checkout@v4
 
-      - name: Check out Home Assistant core
-        uses: actions/checkout@v4
-        with:
-          repository: home-assistant/core
-          path: homeassistant-core
-
       - name: Set up Python
         uses: actions/setup-python@v5
-        id: python
         with:
           python-version: "3.14"
+          allow-prereleases: true
           cache: pip
-          cache-dependency-path: |
-            homeassistant-core/requirements_test.txt
-            homeassistant-core/requirements.txt
+          cache-dependency-path: pyproject.toml
 
-      - name: Mount integration into HA core
-        run: |
-          mkdir -p homeassistant-core/homeassistant/components/realtime_trains
-          cp -r custom_components/realtime_trains/. homeassistant-core/homeassistant/components/realtime_trains/
-
-      - name: Install uv
-        run: pip install uv
-
-      - name: Install HA core test dependencies
+      - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -r homeassistant-core/requirements_test.txt -r homeassistant-core/requirements.txt
+          pip install homeassistant
+          pip install -r requirements_test.txt
           pip install pytest-cov coverage[toml]
 
-      - name: Run pytest (HA-dependent integration tests)
+      - name: Run pytest
         env:
-          PYTHONPATH: homeassistant-core:${{ github.workspace }}
+          PYTHONPATH: ${{ github.workspace }}
           CI: "1"
         run: |
-          pytest \
-            tests/ \
+          pytest tests/ \
             -m 'not live' \
             -ra \
-            --junitxml="$GITHUB_WORKSPACE/integration-junit.xml" \
+            --asyncio-mode=auto \
+            --timeout=30 \
+            --junitxml=integration-junit.xml \
             --cov=custom_components.realtime_trains \
-            --cov-report=xml:"$GITHUB_WORKSPACE/coverage-integration.xml" \
-            --cov-report=term-missing:skip-covered \
-            --cov-config="$GITHUB_WORKSPACE/pyproject.toml"
-        continue-on-error: true
-        id: integration-tests
+            --cov-report=xml:coverage-integration.xml \
+            --cov-report=term-missing:skip-covered
 
       - name: Run live-API integration tests (optional, requires RTT_TOKEN secret)
         if: vars.RTT_TOKEN != ''
@@ -73,7 +56,9 @@ jobs:
           CI: "1"
         run: |
           pytest tests/test_live_api.py -v \
-            --junitxml="$GITHUB_WORKSPACE/live-junit.xml" \
+            --asyncio-mode=auto \
+            --timeout=30 \
+            --junitxml=live-junit.xml \
             -m live
         continue-on-error: true
         id: live-tests
@@ -84,8 +69,8 @@ jobs:
           {
             echo "## Test results"
             echo ""
+            echo "### HA integration tests"
             if [ -f integration-junit.xml ]; then
-              echo "### HA integration tests"
               python - <<'PY'
           import xml.etree.ElementTree as ET
           import sys
@@ -111,9 +96,9 @@ jobs:
                           msg = child.attrib.get("message", "").splitlines()[0][:120]
                           print(f"- {tc.attrib.get('classname','?')}.{tc.attrib.get('name','?')}: {msg}")
           PY
-          else
-            echo "_No integration test results to summarise._"
-          fi
+            else
+              echo "_No integration test results to summarise._"
+            fi
             echo ""
             echo "### Live-API tests"
             if [ -n "$RTT_TOKEN" ] && [ -f live-junit.xml ]; then
@@ -142,7 +127,7 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Annotate PR with failed tests
-        if: always() && github.event_name == 'pull_request' && (steps.integration-tests.outcome == 'failure' || steps.live-tests.outcome == 'failure')
+        if: always() && github.event_name == 'pull_request'
         uses: EnricoMi/publish-unit-test-result-action@v2
         with:
           check_name: pytest results
@@ -164,8 +149,11 @@ jobs:
           fail_ci_if_error: false
           token: ${{ secrets.CODECOV_TOKEN }}
 
-      - name: Fail the workflow if integration tests failed
-        if: steps.integration-tests.outcome == 'failure'
-        run: |
-          echo "::error::Integration tests failed — see the annotations above."
-          exit 1
+      - name: Upload coverage artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage
+          path: coverage-integration.xml
+          if-no-files-found: ignore
+          retention-days: 14

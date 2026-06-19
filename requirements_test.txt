@@ -1,0 +1,7 @@
+pytest>=9.0
+pytest-asyncio>=1.4
+pytest-timeout
+pytest-cov
+pytest-github-actions-annotate-failures
+aiohttp>=3.13
+aioresponses

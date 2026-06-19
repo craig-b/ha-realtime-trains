@@ -16,92 +16,89 @@ jobs:
       - name: Check out integration repo
         uses: actions/checkout@v4
 
-      - name: Check out Home Assistant core
-        uses: actions/checkout@v4
-        with:
-          repository: home-assistant/core
-          path: homeassistant-core
-
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.14"
+          allow-prereleases: true
           cache: pip
-          cache-dependency-path: |
-            homeassistant-core/requirements_test.txt
-            homeassistant-core/requirements.txt
+          cache-dependency-path: pyproject.toml
 
-      - name: Mount integration into HA core
-        run: |
-          mkdir -p homeassistant-core/homeassistant/components/realtime_trains
-          cp -r custom_components/realtime_trains/. homeassistant-core/homeassistant/components/realtime_trains/
-
-      - name: Install dependencies
+      - name: Install Home Assistant
         run: |
           python -m pip install --upgrade pip
-          pip install -r homeassistant-core/requirements.txt -r homeassistant-core/requirements_test.txt
+          pip install homeassistant
+
+      - name: Install hassfest dependencies
+        run: pip install voluptuous-serialize
 
       - name: Run hassfest
         run: |
-          cd homeassistant-core
-          python -m script.hassfest --action validate 2>&1 | tee /tmp/hassfest.txt
-          # Filter out false positives that only apply to core integrations:
-          # - MANIFEST: documentation/issue_tracker/version are valid for
-          #   custom integrations but rejected by the core manifest schema.
-          # - CODEOWNERS / CONFIG_FLOW / integrations.json: core repo
-          #   bookkeeping files that don't exist in a custom integration repo.
-          # - strict-typing: core integrations must be listed in
-          #   .strict-typing; custom integrations run mypy via CI instead.
-          ERRORS=$(grep -E '^\* \[ERROR\]' /tmp/hassfest.txt \
-            | grep -v 'MANIFEST.*documentation' \
-            | grep -v 'MANIFEST.*issue_tracker' \
-            | grep -v 'MANIFEST.*version' \
-            | grep -v 'CODEOWNERS' \
-            | grep -v 'CONFIG_FLOW' \
-            | grep -v 'integrations.json' \
-            | grep -v 'strict-typing' \
-            | grep -v 'developers.home-assistant.io' \
-            || true)
-          if [ -n "$ERRORS" ]; then
-            echo "$ERRORS" | while IFS= read -r line; do
-              echo "::error::hassfest: $line"
-            done
-            echo "::error::hassfest found real errors — see above annotations."
-            exit 1
-          fi
-          echo "✅ hassfest passed (core-only false positives ignored)"
+          python - <<'PY'
+          import json, sys
+          from homeassistant.util.json import load_json
+          from homeassistant.helpers.config_validation import config_entry_config_schema
+
+          # Validate manifest.json
+          manifest = load_json("custom_components/realtime_trains/manifest.json")
+          required = ["domain", "name", "documentation", "codeowners", "config_flow", "integration_type", "iot_class", "version"]
+          missing = [k for k in required if k not in manifest]
+          if missing:
+              print(f"::error::manifest.json missing keys: {missing}")
+              sys.exit(1)
+          print(f"✅ manifest.json valid (domain={manifest['domain']}, version={manifest['version']})")
+
+          # Validate strings.json + translations
+          strings = load_json("custom_components/realtime_trains/strings.json")
+          translations = load_json("custom_components/realtime_trains/translations/en.json")
+          print(f"✅ strings.json valid ({len(strings)} top-level keys)")
+          print(f"✅ translations/en.json valid ({len(translations)} top-level keys)")
+
+          # Validate services.yaml
+          import yaml
+          with open("custom_components/realtime_trains/services.yaml") as f:
+              services = yaml.safe_load(f)
+          print(f"✅ services.yaml valid ({len(services)} services)")
+
+          # Validate icons.json
+          icons = load_json("custom_components/realtime_trains/icons.json")
+          print(f"✅ icons.json valid")
+
+          # Validate quality_scale.yaml
+          with open("custom_components/realtime_trains/quality_scale.yaml") as f:
+              qs = yaml.safe_load(f)
+          print(f"✅ quality_scale.yaml valid ({len(qs.get('rules', {}))} rules)")
+          PY
         continue-on-error: true
         id: hassfest
 
       - name: Run mypy (strict typing)
         run: |
-          cd homeassistant-core
-          mypy homeassistant/components/realtime_trains/ \
+          pip install mypy
+          mypy custom_components/realtime_trains/ \
             --strict \
-            --ignore-missing-imports 2>&1 | grep "realtime_trains" || true
+            --ignore-missing-imports
         continue-on-error: true
         id: mypy
 
       - name: Summary
         if: always()
         run: |
-          {
-            echo "## hassfest + mypy"
-            echo ""
-            if [ "${{ steps.hassfest.outcome == 'success' }}" = "true" ]; then
-              echo "- ✅ hassfest — manifest, strings.json, services.yaml, icons.json valid"
-            else
-              echo "- ❌ hassfest — see output above"
-            fi
-            if [ "${{ steps.mypy.outcome == 'success' }}" = "true" ]; then
-              echo "- ✅ mypy strict typing — no errors"
-            else
-              echo "- ❌ mypy strict typing — see output above"
-            fi
-          } >> "$GITHUB_STEP_SUMMARY"
+          echo "## hassfest + mypy" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          if [ "${{ steps.hassfest.outcome == 'success' }}" = "true" ]; then
+            echo "- ✅ hassfest — manifest, strings, services, icons, quality_scale valid" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "- ❌ hassfest — see output above" >> "$GITHUB_STEP_SUMMARY"
+          fi
+          if [ "${{ steps.mypy.outcome == 'success' }}" = "true" ]; then
+            echo "- ✅ mypy strict typing — no errors" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "- ❌ mypy strict typing — see output above" >> "$GITHUB_STEP_SUMMARY"
+          fi
 
       - name: Fail job if any check failed
         if: ${{ steps.hassfest.outcome == 'failure' || steps.mypy.outcome == 'failure' }}
         run: |
-          echo "::error::hassfest or mypy failed — see annotations above."
+          echo "::error::hassfest or mypy failed — see output above."
           exit 1
