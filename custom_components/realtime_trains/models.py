@@ -29,7 +29,7 @@ def _str(d: dict[str, Any], key: str) -> str | None:
 
 
 def _req_str(d: dict[str, Any], key: str) -> str:
-    return d[key]
+    return str(d[key])
 
 
 def _int(d: dict[str, Any], key: str) -> int | None:
