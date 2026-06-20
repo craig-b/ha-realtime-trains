@@ -235,7 +235,7 @@ def test_board_binary_sensor_cancellations(hass: HomeAssistant) -> None:
 
 
 def test_board_sensor_unique_id(hass: HomeAssistant) -> None:
-    """Board sensor unique_id encodes namespace:station:key[:slot]."""
+    """Board sensor unique_id encodes subentry:namespace:station:key[:slot]."""
     coordinator = _make_board_coordinator(hass)
     from custom_components.realtime_trains.sensor import _make_slot_description
 
@@ -243,8 +243,9 @@ def test_board_sensor_unique_id(hass: HomeAssistant) -> None:
     desc_slot1 = _make_slot_description(1)
     entity0 = RealtimeTrainsBoardSensor(coordinator, "sub1", desc_slot0)
     entity1 = RealtimeTrainsBoardSensor(coordinator, "sub1", desc_slot1)
-    assert entity0.unique_id == "gb-nr:CLPHMJN:departure"
-    assert entity1.unique_id == "gb-nr:CLPHMJN:departure:1"
+    # Subentry-scoped so two boards for the same station don't collide.
+    assert entity0.unique_id == "sub1:gb-nr:CLPHMJN:departure"
+    assert entity1.unique_id == "sub1:gb-nr:CLPHMJN:departure:1"
 
 
 # --- Service sensor entities -----------------------------------------------
@@ -292,7 +293,32 @@ def test_service_sensor_unique_id(hass: HomeAssistant) -> None:
         d for d in SERVICE_SENSOR_DESCRIPTIONS if d.key == "departure"
     )
     entity = RealtimeTrainsServiceSensor(coordinator, "sub2", departure_desc)
-    assert entity.unique_id == "gb-nr:service:1L40:departure"
+    assert entity.unique_id == "sub2:gb-nr:service:1L40:departure"
+
+
+def test_migrate_subentry_unique_id() -> None:
+    """Old unscoped IDs gain a subentry prefix; others are left alone."""
+    from types import SimpleNamespace
+
+    from custom_components.realtime_trains import _migrate_subentry_unique_id
+
+    # Board entity under a subentry -> prefixed with the subentry id.
+    board = SimpleNamespace(config_subentry_id="sub1", unique_id="gb-nr:ABC:departure")
+    assert _migrate_subentry_unique_id(board) == {
+        "new_unique_id": "sub1:gb-nr:ABC:departure"
+    }
+
+    # Already migrated -> no change (idempotent).
+    migrated = SimpleNamespace(
+        config_subentry_id="sub1", unique_id="sub1:gb-nr:ABC:departure"
+    )
+    assert _migrate_subentry_unique_id(migrated) is None
+
+    # Account-level entity (no subentry) -> already unique, untouched.
+    account = SimpleNamespace(
+        config_subentry_id=None, unique_id="account:entry:api_version"
+    )
+    assert _migrate_subentry_unique_id(account) is None
 
 
 def test_service_sensor_live_status(hass: HomeAssistant) -> None:

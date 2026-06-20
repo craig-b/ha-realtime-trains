@@ -7,10 +7,12 @@ the entity-description model used by the Swiss public-transport
 integration. Each service-tracker subentry produces ``departure``,
 ``arrival``, ``delay`` and ``live_status`` entities.
 
-Unique IDs are derived from immutable API data — for boards,
-``{namespace}:{station_code}:{key}``; for service trackers,
-``{namespace}:{headcode_or_identity}:{key}`` — so reloading or
-re-adding the same station re-attaches to the same entity history.
+Unique IDs are scoped by subentry so multiple boards for the same
+station stay independent — for boards,
+``{subentry_id}:{namespace}:{station_code}:{key}``; for service
+trackers, ``{subentry_id}:{namespace}:{headcode_or_identity}:{key}``.
+Older unscoped IDs are migrated on setup (see
+``_migrate_subentry_unique_id`` in ``__init__.py``).
 """
 
 from __future__ import annotations
@@ -487,17 +489,22 @@ class RealtimeTrainsBoardSensor(_BaseBoardEntity, SensorEntity):
         slot = description.slot
         key_part = "departure" if "departure" in description.key else description.key
         suffix = f":{slot}" if slot > 0 else ""
-        self._attr_unique_id = self._build_unique_id(coordinator, key_part, suffix)
+        self._attr_unique_id = self._build_unique_id(
+            coordinator, subentry_id, key_part, suffix
+        )
 
     @staticmethod
     def _build_unique_id(
         coordinator: RealtimeTrainsBoardCoordinator,
+        subentry_id: str,
         key_part: str,
         suffix: str,
     ) -> str:
+        # Scoped by subentry so two boards for the same station are
+        # independent; see _migrate_subentry_unique_id in __init__.py.
         ns = coordinator.namespace
         code = coordinator.station_code
-        return f"{ns}:{code}:{key_part}{suffix}"
+        return f"{subentry_id}:{ns}:{code}:{key_part}{suffix}"
 
     @property
     def native_value(self) -> StateType | datetime:
@@ -560,7 +567,7 @@ class RealtimeTrainsBoardBinarySensor(_BaseBoardEntity, BinarySensorEntity):
         super().__init__(coordinator, subentry_id)
         self.entity_description = description
         self._attr_unique_id = RealtimeTrainsBoardSensor._build_unique_id(
-            coordinator, description.key, ""
+            coordinator, subentry_id, description.key, ""
         )
 
     @property
@@ -593,18 +600,23 @@ class RealtimeTrainsServiceSensor(
         self._attr_device_info = _service_device_info(
             coordinator, coordinator.empty_data
         )
-        self._attr_unique_id = self._build_unique_id(coordinator, description.key)
+        self._attr_unique_id = self._build_unique_id(
+            coordinator, subentry_id, description.key
+        )
 
     @staticmethod
     def _build_unique_id(
-        coordinator: RealtimeTrainsServiceTrackerCoordinator, key: str
+        coordinator: RealtimeTrainsServiceTrackerCoordinator,
+        subentry_id: str,
+        key: str,
     ) -> str:
+        # Scoped by subentry; see _migrate_subentry_unique_id in __init__.py.
         ns = coordinator.namespace
         ident = coordinator.unique_identity or coordinator.headcode
         # Collapse any ``:`` in the identity to a ``_`` to keep the
         # entity-id shape flat (HA's entity-id rules don't allow colons).
         flat_ident = (ident or "").replace(":", "_")
-        return f"{ns}:service:{flat_ident}:{key}"
+        return f"{subentry_id}:{ns}:service:{flat_ident}:{key}"
 
     @property
     def native_value(self) -> StateType | datetime:

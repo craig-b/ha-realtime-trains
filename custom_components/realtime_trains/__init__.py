@@ -21,8 +21,9 @@ import logging
 
 from homeassistant.config_entries import ConfigSubentry
 from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, callback
 from homeassistant.exceptions import ConfigEntryError, ConfigEntryNotReady
+from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from .api import RealtimeTrainsApi
@@ -92,10 +93,35 @@ async def async_setup_entry(
         if coordinator is not None:
             runtime_data.subentry_coordinators[subentry_id] = coordinator
 
+    # Scope older per-station/per-service unique IDs by their subentry so
+    # multiple boards for the same station no longer collide. Runs before
+    # platform setup so entities are added under their migrated IDs.
+    await er.async_migrate_entries(hass, entry.entry_id, _migrate_subentry_unique_id)
+
     entry.async_on_unload(entry.add_update_listener(_async_reload_entry))
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     async_setup_services(hass)
     return True
+
+
+@callback
+def _migrate_subentry_unique_id(entry: er.RegistryEntry) -> dict[str, str] | None:
+    """Prefix a board/service entity's unique ID with its subentry ID.
+
+    The original scheme keyed only on namespace+station (boards) or
+    namespace+service identity (trackers), so two subentries for the same
+    station produced identical unique IDs and HA dropped the duplicates.
+    Prefixing the (stable) subentry ID makes each board independent.
+    Account-level entities have no subentry and are already unique, so
+    they are left untouched.
+    """
+    sub = entry.config_subentry_id
+    if not sub:
+        return None
+    prefix = f"{sub}:"
+    if entry.unique_id.startswith(prefix):
+        return None  # already migrated
+    return {"new_unique_id": prefix + entry.unique_id}
 
 
 async def _build_subentry_coordinator(
