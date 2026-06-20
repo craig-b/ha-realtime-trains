@@ -34,7 +34,8 @@ jobs:
 
       - name: Run hassfest
         run: |
-          python - <<'PY'
+          set -o pipefail
+          python - <<'PY' 2>&1 | tee hassfest-output.log
           import json, sys
           from homeassistant.util.json import load_json
 
@@ -73,28 +74,39 @@ jobs:
 
       - name: Run mypy (strict typing)
         run: |
+          set -o pipefail
           pip install mypy
           mypy custom_components/realtime_trains/ \
             --strict \
-            --ignore-missing-imports
+            --ignore-missing-imports 2>&1 | tee mypy-output.log
         continue-on-error: true
         id: mypy
 
       - name: Summary
         if: always()
         run: |
-          echo "## hassfest + mypy" >> "$GITHUB_STEP_SUMMARY"
-          echo "" >> "$GITHUB_STEP_SUMMARY"
-          if [ "${{ steps.hassfest.outcome == 'success' }}" = "true" ]; then
-            echo "- ✅ hassfest — manifest, strings, services, icons, quality_scale valid" >> "$GITHUB_STEP_SUMMARY"
-          else
-            echo "- ❌ hassfest — see output above" >> "$GITHUB_STEP_SUMMARY"
-          fi
-          if [ "${{ steps.mypy.outcome == 'success' }}" = "true" ]; then
-            echo "- ✅ mypy strict typing — no errors" >> "$GITHUB_STEP_SUMMARY"
-          else
-            echo "- ❌ mypy strict typing — see output above" >> "$GITHUB_STEP_SUMMARY"
-          fi
+          {
+            echo "## hassfest + mypy"
+            echo ""
+            if [ "${{ steps.hassfest.outcome }}" = "success" ]; then
+              echo "- ✅ hassfest — manifest, strings, services, icons, quality_scale valid"
+            else
+              echo "- ❌ hassfest failed:"
+              echo ""
+              echo '```text'
+              tail -n 60 hassfest-output.log 2>/dev/null || echo "(no output captured)"
+              echo '```'
+            fi
+            if [ "${{ steps.mypy.outcome }}" = "success" ]; then
+              echo "- ✅ mypy strict typing — no errors"
+            else
+              echo "- ❌ mypy strict typing failed:"
+              echo ""
+              echo '```text'
+              tail -n 60 mypy-output.log 2>/dev/null || echo "(no output captured)"
+              echo '```'
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Fail job if any check failed
         if: ${{ steps.hassfest.outcome == 'failure' || steps.mypy.outcome == 'failure' }}

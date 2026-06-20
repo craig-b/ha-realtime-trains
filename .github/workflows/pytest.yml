@@ -39,6 +39,10 @@ jobs:
           PYTHONPATH: ${{ github.workspace }}
           CI: "1"
         run: |
+          # pipefail so a pytest failure (incl. collection/import errors)
+          # propagates through the tee; pytest-output.log is surfaced in the
+          # job summary below.
+          set -o pipefail
           python -c "import custom_components.realtime_trains.const; print('import check OK')"
           pytest tests/ \
             -m 'not live' \
@@ -49,7 +53,7 @@ jobs:
             --cov=custom_components.realtime_trains \
             --cov-report=xml:coverage-integration.xml \
             --cov-report=term-missing:skip-covered \
-            --tb=short
+            --tb=short 2>&1 | tee pytest-output.log
         id: integration-tests
 
       - name: Run live-API integration tests (optional, requires RTT_TOKEN secret)
@@ -69,39 +73,62 @@ jobs:
 
       - name: Publish test summary to job summary
         if: always()
+        env:
+          PYTEST_OUTCOME: ${{ steps.integration-tests.outcome }}
         run: |
           {
             echo "## Test results"
             echo ""
             echo "### HA integration tests"
-            if [ -f integration-junit.xml ]; then
-              python - <<'PY'
+            python - <<'PY'
+          import os
           import xml.etree.ElementTree as ET
-          import sys
+
+          outcome = os.environ.get("PYTEST_OUTCOME", "")
           try:
-              tree = ET.parse("integration-junit.xml")
-          except FileNotFoundError:
-              print("No integration junit found"); sys.exit(0)
-          root = tree.getroot()
-          tests = root.attrib.get("tests", "?")
-          failures = root.attrib.get("failures", "0")
-          errors = root.attrib.get("errors", "0")
-          skipped = root.attrib.get("skipped", "0")
-          total_runs = int(tests) if tests.isdigit() else 0
-          passed = total_runs - int(failures or 0) - int(errors or 0) - int(skipped or 0)
-          emoji = "✅" if failures == "0" and errors == "0" else "❌"
-          print(f"{emoji} {passed} passed, {failures} failed, {errors} errored, {skipped} skipped (of {tests})")
-          if int(failures or 0) or int(errors or 0):
-              print("")
-              print("#### Failing tests")
-              for tc in root.iter("testcase"):
-                  for child in tc:
-                      if child.tag in ("failure", "error"):
-                          msg = child.attrib.get("message", "").splitlines()[0][:120]
-                          print(f"- {tc.attrib.get('classname','?')}.{tc.attrib.get('name','?')}: {msg}")
+              root = ET.parse("integration-junit.xml").getroot()
+          except (FileNotFoundError, ET.ParseError):
+              root = None
+
+          # pytest's xunit2 format keeps the counts on the inner <testsuite>
+          # element(s), not the <testsuites> root.
+          suites = []
+          if root is not None:
+              suites = [root] if root.tag == "testsuite" else root.findall(".//testsuite")
+
+          def agg(attr):
+              return sum(int(s.attrib[attr]) for s in suites if s.attrib.get(attr, "").isdigit())
+
+          if any(s.attrib.get("tests", "").isdigit() for s in suites):
+              t, f, e, s = agg("tests"), agg("failures"), agg("errors"), agg("skipped")
+              # Honest status: green only if the step itself succeeded.
+              ok = outcome == "success" and f == 0 and e == 0
+              print(f"{'✅' if ok else '❌'} {t - f - e - s} passed, "
+                    f"{f} failed, {e} errored, {s} skipped (of {t})")
+              if f or e:
+                  print("\n#### Failing tests")
+                  for tc in root.iter("testcase"):
+                      for child in tc:
+                          if child.tag in ("failure", "error"):
+                              lines = (child.attrib.get("message", "") or "").splitlines()
+                              msg = lines[0][:160] if lines else child.tag
+                              cls = tc.attrib.get("classname", "?")
+                              name = tc.attrib.get("name", "?")
+                              print(f"- `{cls}.{name}`: {msg}")
+          else:
+              print(
+                  "❌ pytest produced no usable JUnit report — it exited before "
+                  "any test ran (collection / import error). See output below."
+              )
           PY
-            else
-              echo "_No integration test results to summarise._"
+            if [ "$PYTEST_OUTCOME" != "success" ] && [ -f pytest-output.log ]; then
+              echo ""
+              echo "<details><summary>pytest output</summary>"
+              echo ""
+              echo '```text'
+              tail -n 120 pytest-output.log
+              echo '```'
+              echo "</details>"
             fi
             echo ""
             echo "### Live-API tests"
