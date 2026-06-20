@@ -254,6 +254,43 @@ async def test_service_tracker_coordinator_returns_service_data(
     assert data.formation[0].leading_class is not None
 
 
+async def test_service_tracker_coordinator_polls_by_headcode_without_uid(
+    hass: HomeAssistant,
+) -> None:
+    """Without a unique_identity the tracker polls by headcode + date."""
+    body = _load_fixture("service_1L40_2026-06-18.json")
+    mock_service = NetworkRailServiceDetail.from_dict(body)
+
+    entry = _make_config_entry(hass)
+    account = MagicMock(spec=RealtimeTrainsAccountCoordinator)
+    account.api = MagicMock()
+    account.serialise = AsyncMock(return_value=mock_service)
+
+    subentry = _make_subentry(
+        SUBENTRY_TYPE_SERVICE_TRACKER,
+        {
+            "headcode": "1L40",
+            "date": "2026-06-18",
+            "unique_identity": "",
+            "namespace": "gb-nr",
+        },
+    )
+    coordinator = RealtimeTrainsServiceTrackerCoordinator(
+        hass, entry, "sub2", subentry, account
+    )
+    await coordinator._async_update_data()
+
+    # The fallback must pass identity + departure_date, not a bare/empty uid.
+    _fn, args, kwargs = (
+        account.serialise.call_args.args[0],
+        account.serialise.call_args.args[1:],
+        account.serialise.call_args.kwargs,
+    )
+    assert args == ()
+    assert kwargs["identity"] == "1L40"
+    assert kwargs["departure_date"] == "2026-06-18"
+
+
 async def test_service_tracker_coordinator_not_found_returns_empty(
     hass: HomeAssistant,
 ) -> None:

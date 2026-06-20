@@ -608,11 +608,22 @@ class RealtimeTrainsServiceTrackerCoordinator(
 
     async def _async_update_data(self) -> ServiceTrackerData:
         try:
-            service = await self._account.serialise(
-                self._account.api.async_get_service,
-                self.unique_identity,
-                namespace=self.namespace,
-            )
+            if self.unique_identity:
+                service = await self._account.serialise(
+                    self._account.api.async_get_service,
+                    self.unique_identity,
+                    namespace=self.namespace,
+                )
+            else:
+                # No resolved unique_identity (e.g. the API couldn't supply
+                # one at add-time). Fall back to the headcode + date the user
+                # entered rather than sending an empty uniqueIdentity.
+                service = await self._account.serialise(
+                    self._account.api.async_get_service,
+                    identity=self.headcode,
+                    departure_date=self.departure_date,
+                    namespace=self.namespace,
+                )
         except RttAuthError as err:
             raise _raise_auth(err) from err
         except RttError as err:
