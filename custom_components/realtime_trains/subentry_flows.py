@@ -251,7 +251,7 @@ class DepartureBoardSubentryFlow(ConfigSubentryFlow):
         entry = self._get_entry()
         try:
             return int(entry.data.get(CONF_DEFAULT_SLOT_COUNT, DEFAULT_SLOT_COUNT))
-        except TypeError, ValueError:
+        except (TypeError, ValueError):
             return DEFAULT_SLOT_COUNT
 
 
