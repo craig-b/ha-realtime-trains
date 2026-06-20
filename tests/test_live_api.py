@@ -40,37 +40,37 @@ _SKIP_REASON = "RTT_TOKEN env var not set — set it to run live-API tests"
 # --- Load real api.py + models.py via importlib (no HA needed) -------------
 
 
+# Load under a *private* package name rather than
+# ``custom_components.realtime_trains`` so this module never clobbers the
+# real package in ``sys.modules`` — doing so poisons the namespace for the
+# HA integration tests collected after this file (this module's top-level
+# code runs at collection time even though the live tests are deselected).
+_PKG = "_rtt_live_standalone"
+_SRC = _REPO_ROOT / "custom_components" / "realtime_trains"
+
+
 def _load_api_module() -> Any:
-    """Load custom_components.realtime_trains.api + models without HA."""
+    """Load api.py + models.py standalone (no HA needed)."""
     models_spec = importlib.util.spec_from_file_location(
-        "rtt_models",
-        _REPO_ROOT / "custom_components" / "realtime_trains" / "models.py",
+        f"{_PKG}.models", _SRC / "models.py"
     )
     assert models_spec is not None and models_spec.loader is not None
     models = importlib.util.module_from_spec(models_spec)
-    sys.modules["rtt_models"] = models
+    sys.modules[f"{_PKG}.models"] = models
     models_spec.loader.exec_module(models)
 
-    sys.modules.setdefault("custom_components", type(sys)("custom_components"))
-    sys.modules.setdefault(
-        "custom_components.realtime_trains",
-        type(sys)("custom_components.realtime_trains"),
-    )
-    sys.modules["custom_components.realtime_trains.models"] = models
+    sys.modules.setdefault(_PKG, type(sys)(_PKG))
 
-    const_module = type(sys)("custom_components.realtime_trains.const")
+    const_module = type(sys)(f"{_PKG}.const")
     const_module.API_VERSION = "2026-04-09"
     const_module.BASE_URL = "https://data.rtt.io"
     const_module.TOKEN_REFRESH_LEAD_TIME = 60
-    sys.modules["custom_components.realtime_trains.const"] = const_module
+    sys.modules[f"{_PKG}.const"] = const_module
 
-    api_spec = importlib.util.spec_from_file_location(
-        "custom_components.realtime_trains.api",
-        _REPO_ROOT / "custom_components" / "realtime_trains" / "api.py",
-    )
+    api_spec = importlib.util.spec_from_file_location(f"{_PKG}.api", _SRC / "api.py")
     assert api_spec is not None and api_spec.loader is not None
     api_module = importlib.util.module_from_spec(api_spec)
-    sys.modules["custom_components.realtime_trains.api"] = api_module
+    sys.modules[f"{_PKG}.api"] = api_module
     api_spec.loader.exec_module(api_module)
     return api_module
 
@@ -83,15 +83,12 @@ RttRateLimitError = _api.RttRateLimitError
 RttConnectionError = _api.RttConnectionError
 
 # Re-export models for type assertions
-NetworkRailLocationLineUpResponse = sys.modules[
-    "custom_components.realtime_trains.models"
-].NetworkRailLocationLineUpResponse
-NetworkRailServiceDetail = sys.modules[
-    "custom_components.realtime_trains.models"
-].NetworkRailServiceDetail
-Stop = sys.modules["custom_components.realtime_trains.models"].Stop
-ApiInfo = sys.modules["custom_components.realtime_trains.models"].ApiInfo
-LocationStatus = sys.modules["custom_components.realtime_trains.models"].LocationStatus
+_models = sys.modules[f"{_PKG}.models"]
+NetworkRailLocationLineUpResponse = _models.NetworkRailLocationLineUpResponse
+NetworkRailServiceDetail = _models.NetworkRailServiceDetail
+Stop = _models.Stop
+ApiInfo = _models.ApiInfo
+LocationStatus = _models.LocationStatus
 
 
 # --- Fixtures ---------------------------------------------------------------

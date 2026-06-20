@@ -18,41 +18,41 @@ import pytest
 # Load api.py and models.py directly via importlib so the test does not
 # need the full Home Assistant installed. ``api.py`` only imports
 # ``aiohttp`` and ``models.py``; ``models.py`` only imports stdlib.
+#
+# We load everything under a *private* package name (``_rtt_standalone``)
+# rather than ``custom_components.realtime_trains`` so this module never
+# clobbers the real package in ``sys.modules``. Doing so would poison the
+# namespace for the HA integration tests collected after this file (they
+# do ``from custom_components.realtime_trains.const import …`` and would
+# otherwise resolve our location-less stub). ``api.py`` uses relative
+# imports (``from .models``/``from .const``), which resolve against the
+# loaded module's package name, so the package can be called anything.
 _REPO_ROOT = Path(__file__).resolve().parents[1]
+_PKG = "_rtt_standalone"
+_SRC = _REPO_ROOT / "custom_components" / "realtime_trains"
 
 _models_spec = importlib.util.spec_from_file_location(
-    "rtt_models", _REPO_ROOT / "custom_components" / "realtime_trains" / "models.py"
+    f"{_PKG}.models", _SRC / "models.py"
 )
 assert _models_spec is not None and _models_spec.loader is not None
 models = importlib.util.module_from_spec(_models_spec)
-sys.modules["rtt_models"] = models
+sys.modules[f"{_PKG}.models"] = models
 _models_spec.loader.exec_module(models)
 
-# Inject models under the name api.py imports it as (a relative import
-# ``from .models import …``). Because api.py uses a relative import it
-# needs to be loaded as part of a package — emulate that by registering
-# a minimal parent package.
-sys.modules.setdefault("custom_components", type(sys)("custom_components"))
-sys.modules.setdefault(
-    "custom_components.realtime_trains",
-    type(sys)("custom_components.realtime_trains"),
-)
-sys.modules["custom_components.realtime_trains.models"] = models
-# And expose a tiny const module so ``from .const import API_VERSION...``
-# works without the HA-aware ``_init__.py``.
-_const_module = type(sys)("custom_components.realtime_trains.const")
+# Register a minimal parent package so api.py's relative imports resolve.
+sys.modules.setdefault(_PKG, type(sys)(_PKG))
+# Expose a tiny const module so ``from .const import API_VERSION...``
+# works without the HA-aware ``__init__.py``.
+_const_module = type(sys)(f"{_PKG}.const")
 _const_module.API_VERSION = "2026-04-09"  # noqa: SIM105  - simple attr
 _const_module.BASE_URL = "https://data.rtt.io"
 _const_module.TOKEN_REFRESH_LEAD_TIME = 60
-sys.modules["custom_components.realtime_trains.const"] = _const_module
+sys.modules[f"{_PKG}.const"] = _const_module
 
-_api_spec = importlib.util.spec_from_file_location(
-    "custom_components.realtime_trains.api",
-    _REPO_ROOT / "custom_components" / "realtime_trains" / "api.py",
-)
+_api_spec = importlib.util.spec_from_file_location(f"{_PKG}.api", _SRC / "api.py")
 assert _api_spec is not None and _api_spec.loader is not None
 api_module = importlib.util.module_from_spec(_api_spec)
-sys.modules["custom_components.realtime_trains.api"] = api_module
+sys.modules[f"{_PKG}.api"] = api_module
 _api_spec.loader.exec_module(api_module)
 
 RealtimeTrainsApi = api_module.RealtimeTrainsApi
