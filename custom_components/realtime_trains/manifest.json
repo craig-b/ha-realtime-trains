@@ -10,5 +10,5 @@
   "quality_scale": "platinum",
   "loggers": ["custom_components.realtime_trains"],
   "requirements": [],
-  "version": "0.1.0"
+  "version": "0.1.1"
 }
