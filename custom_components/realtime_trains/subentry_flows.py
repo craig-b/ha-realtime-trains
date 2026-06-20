@@ -119,6 +119,47 @@ _BOARD_STEP1_SCHEMA = vol.Schema(
 )
 
 
+# Board options that can be edited after creation (station is fixed — add a
+# new board to monitor a different station).
+_BOARD_OPTIONS_SCHEMA = vol.Schema(
+    {
+        vol.Optional(CONF_FILTER_FROM): TextSelector(
+            TextSelectorConfig(type=TextSelectorType.TEXT)
+        ),
+        vol.Optional(CONF_FILTER_TO): TextSelector(
+            TextSelectorConfig(type=TextSelectorType.TEXT)
+        ),
+        vol.Optional(CONF_TIME_WINDOW, default=DEFAULT_TIME_WINDOW): NumberSelector(
+            NumberSelectorConfig(
+                min=MIN_TIME_WINDOW,
+                max=MAX_TIME_WINDOW,
+                step=1,
+                mode=NumberSelectorMode.BOX,
+            )
+        ),
+        vol.Optional(CONF_SLOT_COUNT): NumberSelector(
+            NumberSelectorConfig(
+                min=MIN_SLOT_COUNT,
+                max=MAX_SLOT_COUNT,
+                step=1,
+                mode=NumberSelectorMode.BOX,
+            )
+        ),
+        vol.Optional(
+            CONF_POLLING_INTERVAL, default=DEFAULT_POLLING_INTERVAL
+        ): NumberSelector(
+            NumberSelectorConfig(
+                min=MIN_POLLING_INTERVAL,
+                max=MAX_POLLING_INTERVAL,
+                step=10,
+                mode=NumberSelectorMode.BOX,
+            )
+        ),
+        vol.Optional(CONF_DETAILED, default=False): bool,
+    }
+)
+
+
 def _select_selector_for_stops(stops: list[Stop]) -> SelectSelector:
     options: list[SelectOptionDict] = [
         {
@@ -240,6 +281,31 @@ class DepartureBoardSubentryFlow(ConfigSubentryFlow):
         )
         return self.async_create_entry(title=title, data=data)
 
+    async def async_step_reconfigure(
+        self, user_input: dict[str, Any] | None = None
+    ) -> SubentryFlowResult:
+        """Edit an existing board's options (the station stays fixed)."""
+        subentry = self._get_reconfigure_subentry()
+        data = dict(subentry.data)
+        if user_input is not None:
+            new_data = {**data, **user_input}
+            title = board_display_name(
+                data.get(CONF_STATION_DESCRIPTION) or data.get(CONF_STATION),
+                new_data.get(CONF_FILTER_FROM),
+                new_data.get(CONF_FILTER_TO),
+            )
+            # The entry's update listener reloads it, rebuilding the board
+            # coordinator with the new options.
+            return self.async_update_and_abort(
+                self._get_entry(), subentry, title=title, data=new_data
+            )
+        return self.async_show_form(
+            step_id="reconfigure",
+            data_schema=self.add_suggested_values_to_schema(
+                _BOARD_OPTIONS_SCHEMA, suggested_values=data
+            ),
+        )
+
     def _coordinator(self) -> RealtimeTrainsAccountCoordinator | None:
         entry = self._get_entry()
         runtime = getattr(entry, "runtime_data", None)
@@ -251,7 +317,7 @@ class DepartureBoardSubentryFlow(ConfigSubentryFlow):
         entry = self._get_entry()
         try:
             return int(entry.data.get(CONF_DEFAULT_SLOT_COUNT, DEFAULT_SLOT_COUNT))
-        except TypeError, ValueError:
+        except (TypeError, ValueError):
             return DEFAULT_SLOT_COUNT
 
 
@@ -290,63 +356,98 @@ class ServiceTrackerSubentryFlow(ConfigSubentryFlow):
         self, user_input: dict[str, Any] | None = None
     ) -> SubentryFlowResult:
         """Collect headcode + date (or unique_identity) and verify the service."""
-        errors: dict[str, str] = {}
         if user_input is not None:
-            coordinator = self._coordinator()
-            unique_identity = (user_input.get(CONF_UNIQUE_IDENTITY) or "").strip()
-            headcode = (user_input.get(CONF_HEADCODE) or "").strip()
-            date = (user_input.get(CONF_DATE) or "").strip()
-            if coordinator is None:
-                errors["base"] = "account_not_ready"
-            elif not unique_identity and not headcode:
-                errors["base"] = "headcode_required"
-            else:
-                try:
-                    if unique_identity:
-                        service = await coordinator.serialise(
-                            coordinator.api.async_get_service,
-                            unique_identity,
-                            namespace=DEFAULT_NAMESPACE,
-                        )
-                    else:
-                        service = await coordinator.serialise(
-                            coordinator.api.async_get_service,
-                            identity=headcode,
-                            departure_date=date,
-                            namespace=DEFAULT_NAMESPACE,
-                        )
-                except Exception as err:  # noqa: BLE001
-                    _LOGGER.warning("Service lookup failed: %s", err)
-                    errors["base"] = "service_not_found"
-                else:
-                    sm = getattr(service, "schedule_metadata", None)
-                    resolved = getattr(sm, "unique_identity", None) or unique_identity
-                    title = self._tracker_title(
-                        headcode=headcode
-                        or (resolved.split(":")[1] if ":" in resolved else ""),
-                        date=date
-                        or (
-                            resolved.split(":")[2]
-                            if resolved.count(":") >= 2  # noqa: PLR2004
-                            else ""
-                        ),
-                        unique_identity=resolved,
-                    )
-                    data = {
-                        CONF_UNIQUE_IDENTITY: resolved,
-                        CONF_HEADCODE: headcode,
-                        CONF_DATE: date,
-                        CONF_NAMESPACE: DEFAULT_NAMESPACE,
-                    }
-                    return self.async_create_entry(title=title, data=data)
+            data, title, err = await self._resolve_service(user_input)
+            if err is None:
+                return self.async_create_entry(title=title, data=data)
             return self.async_show_form(
                 step_id="user",
                 data_schema=self.add_suggested_values_to_schema(
                     _SERVICE_STEP1_SCHEMA, suggested_values=user_input
                 ),
-                errors=errors,
+                errors={"base": err},
             )
         return self.async_show_form(step_id="user", data_schema=_SERVICE_STEP1_SCHEMA)
+
+    async def async_step_reconfigure(
+        self, user_input: dict[str, Any] | None = None
+    ) -> SubentryFlowResult:
+        """Re-point an existing tracker at a different service."""
+        subentry = self._get_reconfigure_subentry()
+        if user_input is not None:
+            data, title, err = await self._resolve_service(user_input)
+            if err is None:
+                # The entry's update listener reloads it, rebuilding the
+                # tracker coordinator with the new service identity.
+                return self.async_update_and_abort(
+                    self._get_entry(), subentry, title=title, data=data
+                )
+            return self.async_show_form(
+                step_id="reconfigure",
+                data_schema=self.add_suggested_values_to_schema(
+                    _SERVICE_STEP1_SCHEMA, suggested_values=user_input
+                ),
+                errors={"base": err},
+            )
+        return self.async_show_form(
+            step_id="reconfigure",
+            data_schema=self.add_suggested_values_to_schema(
+                _SERVICE_STEP1_SCHEMA, suggested_values=dict(subentry.data)
+            ),
+        )
+
+    async def _resolve_service(
+        self, user_input: dict[str, Any]
+    ) -> tuple[dict[str, Any] | None, str | None, str | None]:
+        """Verify a service and build its subentry data + title.
+
+        Returns ``(data, title, None)`` on success, or
+        ``(None, None, error_key)`` when validation or lookup fails.
+        """
+        coordinator = self._coordinator()
+        unique_identity = (user_input.get(CONF_UNIQUE_IDENTITY) or "").strip()
+        headcode = (user_input.get(CONF_HEADCODE) or "").strip()
+        date = (user_input.get(CONF_DATE) or "").strip()
+        if coordinator is None:
+            return None, None, "account_not_ready"
+        if not unique_identity and not headcode:
+            return None, None, "headcode_required"
+        try:
+            if unique_identity:
+                service = await coordinator.serialise(
+                    coordinator.api.async_get_service,
+                    unique_identity,
+                    namespace=DEFAULT_NAMESPACE,
+                )
+            else:
+                service = await coordinator.serialise(
+                    coordinator.api.async_get_service,
+                    identity=headcode,
+                    departure_date=date,
+                    namespace=DEFAULT_NAMESPACE,
+                )
+        except Exception as err:  # noqa: BLE001
+            _LOGGER.warning("Service lookup failed: %s", err)
+            return None, None, "service_not_found"
+        sm = getattr(service, "schedule_metadata", None)
+        resolved = getattr(sm, "unique_identity", None) or unique_identity
+        title = self._tracker_title(
+            headcode=headcode or (resolved.split(":")[1] if ":" in resolved else ""),
+            date=date
+            or (
+                resolved.split(":")[2]
+                if resolved.count(":") >= 2  # noqa: PLR2004
+                else ""
+            ),
+            unique_identity=resolved,
+        )
+        data = {
+            CONF_UNIQUE_IDENTITY: resolved,
+            CONF_HEADCODE: headcode,
+            CONF_DATE: date,
+            CONF_NAMESPACE: DEFAULT_NAMESPACE,
+        }
+        return data, title, None
 
     def _tracker_title(self, *, headcode: str, date: str, unique_identity: str) -> str:
         # ``unique_identity`` is shaped ``namespace:identity:date`` so the

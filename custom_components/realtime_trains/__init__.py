@@ -41,7 +41,7 @@ from .coordinator import (
     RealtimeTrainsRuntimeData,
     RealtimeTrainsServiceTrackerCoordinator,
 )
-from .services import async_setup_services
+from .services import async_setup_services, async_unload_services
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -166,7 +166,18 @@ async def async_unload_entry(
     hass: HomeAssistant, entry: RealtimeTrainsConfigEntry
 ) -> bool:
     """Unload a config entry."""
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    # When this is the last loaded account entry, drop the shared services so
+    # they don't linger pointing at torn-down runtime data.
+    if unload_ok:
+        loaded_entries = [
+            other
+            for other in hass.config_entries.async_loaded_entries(DOMAIN)
+            if other.entry_id != entry.entry_id
+        ]
+        if not loaded_entries:
+            async_unload_services(hass)
+    return unload_ok
 
 
 async def _async_reload_entry(

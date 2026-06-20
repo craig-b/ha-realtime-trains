@@ -161,7 +161,6 @@ def _make_board_coordinator(
                 namespace="gb-nr",
                 mode="TRAIN",
                 in_passenger_service=True,
-                onboard_facilities=None,
                 stock_branding="South Western Railway",
             )
         ],

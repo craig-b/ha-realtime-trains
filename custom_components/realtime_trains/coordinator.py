@@ -56,6 +56,7 @@ from .const import (
     DEFAULT_SLOT_COUNT,
     DEFAULT_TIME_WINDOW,
     DOMAIN,
+    MAX_POLLING_INTERVAL,
     STOPS_CACHE_TTL_DAYS,
 )
 from .models import (
@@ -139,17 +140,29 @@ def _translate(err: RttError) -> UpdateFailed:
     return UpdateFailed(translation_domain=DOMAIN, translation_key="unknown")
 
 
-def _raise_auth(err: RttError) -> ConfigEntryError:
-    """Wrap an auth failure in a translated ConfigEntryError.
+def _raise_auth() -> ConfigEntryError:
+    """Build a translated ConfigEntryError for an auth failure.
 
-    Returns the exception (rather than raising) so callers can decide
-    whether to raise it from a setup path (becomes a repair issue) or
-    propagate via ``raise``.
+    Returns the exception (rather than raising) so callers can raise it
+    with the originating error chained via ``raise ... from err``.
     """
     return ConfigEntryError(
         translation_domain=DOMAIN,
         translation_key="invalid_auth",
     )
+
+
+def _rate_limit_backoff(err: RttRateLimitError, base: timedelta) -> timedelta:
+    """Choose the next poll delay after a 429.
+
+    Honour the API's ``Retry-After`` hint when present (never polling
+    sooner than the base cadence); otherwise ease off by doubling the base
+    cadence, capped at ``MAX_POLLING_INTERVAL``.
+    """
+    cap = timedelta(seconds=MAX_POLLING_INTERVAL)
+    if err.retry_after is not None and err.retry_after > 0:
+        return min(max(base, timedelta(seconds=err.retry_after)), cap)
+    return min(base * 2, cap)
 
 
 # --- Account coordinator --------------------------------------------------
@@ -220,7 +233,7 @@ class RealtimeTrainsAccountCoordinator(DataUpdateCoordinator[AccountData]):
                 self._stops_cache = await self.serialise(self._api.async_get_stops)
                 self._stops_cache_at = now
             except RttAuthError as err:
-                raise _raise_auth(err) from err
+                raise _raise_auth() from err
             except RttError as err:
                 raise _translate(err) from err
         return self._stops_cache or []
@@ -250,7 +263,7 @@ class RealtimeTrainsAccountCoordinator(DataUpdateCoordinator[AccountData]):
             api_info = await self.serialise(self._api.async_get_info)
             stops = self._stops_cache
         except RttAuthError as err:
-            raise _raise_auth(err) from err
+            raise _raise_auth() from err
         except RttError as err:
             raise _translate(err) from err
         return AccountData(api_info=api_info, stops=stops or [])
@@ -288,7 +301,6 @@ class DepartureSlot:
     namespace: str | None
     mode: str | None
     in_passenger_service: bool | None
-    onboard_facilities: list[str] | None
     stock_branding: str | None
 
 
@@ -367,7 +379,6 @@ def _slot_from_lineup(
     platform_planned: str | None = None
     platform_actual: str | None = None
     stock_branding: str | None = None
-    onboard_facilities: list[str] | None = None
     if md is not None:
         if md.platform is not None:
             platform_planned = md.platform.planned
@@ -423,7 +434,6 @@ def _slot_from_lineup(
         namespace=ns,
         mode=mode,
         in_passenger_service=in_service,
-        onboard_facilities=onboard_facilities,
         stock_branding=stock_branding,
     )
 
@@ -455,11 +465,13 @@ class RealtimeTrainsBoardCoordinator(DataUpdateCoordinator[BoardData]):
         self.detailed: bool = bool(data.get(CONF_DETAILED, False))
         self.namespace: str = data.get(CONF_NAMESPACE, DEFAULT_NAMESPACE)
         polling_seconds = int(data.get(CONF_POLLING_INTERVAL, DEFAULT_POLLING_INTERVAL))
+        # Configured cadence; restored after a rate-limit backoff.
+        self._base_interval = timedelta(seconds=polling_seconds)
         super().__init__(
             hass,
             _LOGGER,
             name=f"{DOMAIN}_board_{subentry_id}",
-            update_interval=timedelta(seconds=polling_seconds),
+            update_interval=self._base_interval,
             config_entry=config_entry,
         )
         # Build the empty-state BoardData so entities never read None.
@@ -491,9 +503,14 @@ class RealtimeTrainsBoardCoordinator(DataUpdateCoordinator[BoardData]):
                 namespace=self.namespace,
             )
         except RttAuthError as err:
-            raise _raise_auth(err) from err
+            raise _raise_auth() from err
+        except RttRateLimitError as err:
+            self.update_interval = _rate_limit_backoff(err, self._base_interval)
+            raise _translate(err) from err
         except RttError as err:
             raise _translate(err) from err
+        # Successful poll — restore the configured cadence after any backoff.
+        self.update_interval = self._base_interval
         if isinstance(
             response,
             (NetworkRailLocationLineUpResponse, LocationLineUpResponse),
@@ -608,13 +625,31 @@ class RealtimeTrainsServiceTrackerCoordinator(
 
     async def _async_update_data(self) -> ServiceTrackerData:
         try:
-            service = await self._account.serialise(
-                self._account.api.async_get_service,
-                self.unique_identity,
-                namespace=self.namespace,
-            )
+            if self.unique_identity:
+                service = await self._account.serialise(
+                    self._account.api.async_get_service,
+                    self.unique_identity,
+                    namespace=self.namespace,
+                )
+            else:
+                # No resolved unique_identity (e.g. the API couldn't supply
+                # one at add-time). Fall back to the headcode + date the user
+                # entered rather than sending an empty uniqueIdentity.
+                service = await self._account.serialise(
+                    self._account.api.async_get_service,
+                    identity=self.headcode,
+                    departure_date=self.departure_date,
+                    namespace=self.namespace,
+                )
         except RttAuthError as err:
-            raise _raise_auth(err) from err
+            raise _raise_auth() from err
+        except RttRateLimitError as err:
+            # Back off from the current adaptive cadence; the next successful
+            # poll resets it via ``_update_interval_for_state``.
+            self.update_interval = _rate_limit_backoff(
+                err, self.update_interval or SERVICE_POLL_SCHEDULED
+            )
+            raise _translate(err) from err
         except RttError as err:
             raise _translate(err) from err
         # The tracker only ever uses /gb-nr/service (allocator + KYT data).

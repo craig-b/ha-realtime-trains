@@ -10,7 +10,7 @@ Some tokens have `namespaceRestriction: true`, restricting access to one namespa
 
 ## No formation data on departure boards
 
-The `/gb-nr/location` endpoint does not return rolling-stock formation or Know-Your-Train data. These are only available via the service-tracker flow (`/gb-nr/service`), and only if your token has the `allowAllocations` and `allowKnowYourTrain` entitlements. The `onboard_facilities` and `formation` attributes on departure-board entities are always `null`.
+The `/gb-nr/location` endpoint does not return rolling-stock formation or Know-Your-Train data. These are only available via the service-tracker flow (`/gb-nr/service`), and only if your token has the `allowAllocations` and `allowKnowYourTrain` entitlements. Departure-board entities therefore expose no formation or Know-Your-Train attributes.
 
 ## Entitlement-gated features
 
@@ -25,7 +25,7 @@ If your token lacks an entitlement, the corresponding attributes are `null` and 
 
 ## API rate limits
 
-The API enforces per-minute, per-hour, per-day and per-week request limits. If you configure many departure boards with short polling intervals, you may hit the rate limit. The rate-limit diagnostic sensors on the account device show your current usage. When rate-limited (HTTP 429), the coordinator raises `UpdateFailed` and HA retries on the next poll.
+The API enforces per-minute, per-hour, per-day and per-week request limits. If you configure many departure boards with short polling intervals, you may hit the rate limit. The rate-limit diagnostic sensors on the account device show your current usage. When rate-limited (HTTP 429), the board and service-tracker coordinators widen their poll interval before the next attempt — honouring the API's `Retry-After` hint when present, otherwise doubling the interval (capped at 3600 s). The configured cadence is restored after the next successful poll.
 
 ## No push notifications
 

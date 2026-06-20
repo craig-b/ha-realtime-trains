@@ -46,8 +46,9 @@ The next service's departure as a timestamp sensor. Shows the **advertised** tim
 | namespace | string | Operating namespace, e.g. `gb-nr`. |
 | mode | string | `TRAIN`, `SHIP`, `BUS`, `SCHEDULED_BUS`, `REPLACEMENT_BUS`. |
 | in_passenger_service | bool | Whether the service is currently in passenger service. |
-| onboard_facilities | list[string] \| null | Always `null` on a board entity — only populated via the service-tracker flow (requires `allowKnowYourTrain`). |
-| formation | list[dict] \| null | Always `null` on a board entity — only populated via the service-tracker flow (requires `allowAllocations`). See [Formation attributes](#formation-attributes). |
+| stock_branding | string \| null | Rolling-stock branding from the line-up entry, when supplied. |
+
+Rolling-stock formation and Know-Your-Train data are not available on board entities — use the service-tracker flow for those (see [Formation attributes](#formation-attributes)).
 
 ### `sensor.<station>_departure_2` … `_departure_N`
 

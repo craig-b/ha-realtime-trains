@@ -260,7 +260,7 @@
           "name": "Limit"
         },
         "namespace": {
-          "description": "Filter to one namespace. Defaults to your token's first namespace.",
+          "description": "Filter to one namespace, e.g. gb-nr. Leave blank to include all namespaces.",
           "name": "Namespace"
         },
         "query": {
@@ -311,6 +311,18 @@
           "data": {
             "station": "Station"
           }
+        },
+        "reconfigure": {
+          "title": "Edit departure board",
+          "description": "Adjust this board's options. The station stays the same — add a new board to monitor a different station.",
+          "data": {
+            "filter_from": "Trains previously called at (optional)",
+            "filter_to": "Trains subsequently calling at (optional)",
+            "time_window": "Look-ahead window (minutes)",
+            "slot_count": "Number of departure slots to expose",
+            "polling_interval": "Polling interval (seconds)",
+            "detailed": "Detailed mode (requires entitlement)"
+          }
         }
       },
       "error": {
@@ -319,6 +331,9 @@
         "no_station_matches": "No stations matched. Try a different fragment.",
         "station_invalid": "Pick a station from the list.",
         "cannot_connect": "Cannot reach Realtime Trains to search stations. Retry shortly."
+      },
+      "abort": {
+        "reconfigure_successful": "Board updated."
       },
       "entry_type": "Departure Board",
       "initiate_flow": {
@@ -340,12 +355,29 @@
             "headcode": "Train reporting identity, e.g. `1L40`.",
             "date": "Departure date from the train's planned origin."
           }
+        },
+        "reconfigure": {
+          "title": "Edit service tracker",
+          "description": "Point this tracker at a different train by headcode and date (or full unique identity).",
+          "data": {
+            "unique_identity": "Unique identity",
+            "headcode": "Headcode",
+            "date": "Departure date"
+          },
+          "data_description": {
+            "unique_identity": "Full `namespace:identity:date` form, e.g. `gb-nr:1L40:2026-06-18`. Takes priority over headcode+date.",
+            "headcode": "Train reporting identity, e.g. `1L40`.",
+            "date": "Departure date from the train's planned origin."
+          }
         }
       },
       "error": {
         "account_not_ready": "The account is still loading. Wait a moment and retry.",
         "headcode_required": "Either headcode+date or unique identity is required.",
         "service_not_found": "No service found with the given headcode/date (or unique identity)."
+      },
+      "abort": {
+        "reconfigure_successful": "Service tracker updated."
       },
       "entry_type": "Service Tracker",
       "initiate_flow": {
