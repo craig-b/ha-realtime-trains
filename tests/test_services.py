@@ -209,3 +209,107 @@ def test_raise_for_generic_exception() -> None:
     with pytest.raises(ServiceValidationError) as exc_info:
         _raise_for(ValueError("boom"))
     assert exc_info.value.translation_key == "unknown"
+
+
+# --- get_departures handler -------------------------------------------------
+
+
+async def test_get_departures_omitted_time_window_uses_default(monkeypatch) -> None:
+    """A call without ``time_window`` must not KeyError and reports the default."""
+    from custom_components.realtime_trains import services as svc
+
+    data = svc._GET_DEPARTURES_SCHEMA(
+        {"config_entry_id": "entry1", "station": "gb-nr:CLPHMJN"}
+    )
+    account = MagicMock()
+
+    async def _fake_serialise(fn, *args, **kwargs):
+        return NetworkRailLocationLineUpResponse.from_dict({})
+
+    account.serialise = _fake_serialise
+    runtime = MagicMock()
+    runtime.account = account
+
+    monkeypatch.setattr(svc, "_resolve_entry", lambda hass, call: MagicMock())
+    monkeypatch.setattr(svc, "_runtime", lambda entry: runtime)
+    monkeypatch.setattr(svc, "_client", lambda runtime_data: MagicMock())
+
+    call = MagicMock()
+    call.data = data
+    call.hass = MagicMock()
+
+    result = await svc._async_get_departures(call)
+    assert result is not None
+    assert result["query"]["time_window"] == svc.DEFAULT_TIME_WINDOW
+    assert result["query"]["namespace"] == "gb-nr"
+    assert result["query"]["code"] == "CLPHMJN"
+
+
+# --- refresh_now handler ----------------------------------------------------
+
+
+def _refresh_now_call(monkeypatch, coordinator) -> MagicMock:
+    """Build a refresh_now ServiceCall wired to ``coordinator`` via mocks."""
+    from custom_components.realtime_trains import services as svc
+
+    device = MagicMock()
+    device.identifiers = {(DOMAIN, "board:sub123")}
+    device.config_entries = {"entry1"}
+    registry = MagicMock()
+    registry.async_get.return_value = device
+    monkeypatch.setattr(svc.dr, "async_get", lambda hass: registry)
+
+    entry = MagicMock()
+    entry.domain = DOMAIN
+    runtime = MagicMock()
+    runtime.subentry_coordinators = {"sub123": coordinator}
+    entry.runtime_data = runtime
+
+    hass = MagicMock()
+    hass.config_entries.async_get_entry.return_value = entry
+    call = MagicMock()
+    call.hass = hass
+    call.data = {svc.ATTR_DEVICE_ID: "dev1"}
+    return call
+
+
+async def test_refresh_now_updates_state_via_async_refresh(monkeypatch) -> None:
+    """refresh_now must call ``async_refresh`` so entities actually update."""
+    from custom_components.realtime_trains import services as svc
+
+    calls: list[str] = []
+    coordinator = MagicMock()
+
+    async def _fake_refresh() -> None:
+        calls.append("async_refresh")
+
+    async def _fail_update() -> None:
+        raise AssertionError("_async_update_data must not be used")
+
+    coordinator.async_refresh = _fake_refresh
+    coordinator._async_update_data = _fail_update
+    coordinator.last_update_success = True
+
+    call = _refresh_now_call(monkeypatch, coordinator)
+    result = await svc._async_refresh_now(call)
+    assert result == {"ok": True}
+    assert calls == ["async_refresh"]
+
+
+async def test_refresh_now_surfaces_update_failure(monkeypatch) -> None:
+    """A failed poll is re-raised as a ServiceValidationError."""
+    from custom_components.realtime_trains import services as svc
+
+    coordinator = MagicMock()
+
+    async def _fake_refresh() -> None:
+        return None
+
+    coordinator.async_refresh = _fake_refresh
+    coordinator.last_update_success = False
+    coordinator.last_exception = RttRateLimitError("slow down")
+
+    call = _refresh_now_call(monkeypatch, coordinator)
+    with pytest.raises(ServiceValidationError) as exc_info:
+        await svc._async_refresh_now(call)
+    assert exc_info.value.translation_key == "rate_limited"

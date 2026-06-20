@@ -303,7 +303,10 @@ async def _async_get_departures(call: ServiceCall) -> dict[str, Any] | None:
         "namespace": namespace,
         "time_from": _iso(time_from),
         "time_to": _iso(time_to),
-        "time_window": call.data[FIELD_TIME_WINDOW],
+        # Report the *effective* window (``time_window`` is optional in the
+        # schema, so reading it back off ``call.data`` would KeyError, and it
+        # is cleared above when an explicit ``time_to`` is supplied).
+        "time_window": time_window,
     }
     return {"services": payload, "query": _strip_none(query_block)}
 
@@ -427,12 +430,13 @@ async def _async_refresh_now(call: ServiceCall) -> dict[str, Any] | None:
             translation_placeholders={"subentry_id": subentry_id},
         )
 
-    # Use ``_async_update_data`` directly rather than ``async_request_refresh``
-    # so the service actually awaits the next poll and surfaces any error.
-    try:
-        await coordinator._async_update_data()  # noqa: SLF001
-    except Exception as err:  # noqa: BLE001
-        _raise_for(err)
+    # ``async_refresh`` awaits the poll, stores the result on the coordinator
+    # and notifies entities (unlike ``_async_update_data``, which discards its
+    # result). It swallows update errors into ``last_update_success`` rather
+    # than raising, so re-surface any failure to the caller afterwards.
+    await coordinator.async_refresh()
+    if not coordinator.last_update_success:
+        _raise_for(coordinator.last_exception or RttError("Refresh failed"))
         return None  # pragma: no cover
     return {"ok": True}
 
