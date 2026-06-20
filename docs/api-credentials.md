@@ -48,7 +48,7 @@ Every API response includes rate-limit headers. The integration consumes them tr
 - `X-RateLimit-Limit-Day` / `X-RateLimit-Remaining-Day`
 - `X-RateLimit-Limit-Week` / `X-RateLimit-Remaining-Week`
 
-These are exposed as diagnostic sensors under the account device (see [Entities reference](entities.md#account-diagnostic-sensors)). When `Remaining` for the most constrained dimension drops below 10 %, the integration relaxes polling intervals until the limit recovers. A `429 Too Many Requests` response with a `Retry-After` header is treated as a transient failure and retried after the indicated number of seconds.
+These are exposed as diagnostic sensors under the account device (see [Entities reference](entities.md#account-diagnostic-sensors)) so you can monitor headroom. A `429 Too Many Requests` response makes the affected coordinator back off before its next poll — waiting for the `Retry-After` hint when present, otherwise doubling its interval (capped at 3600 s) — and the configured cadence resumes after the next successful poll.
 
 ## Token handling & privacy
 

@@ -52,7 +52,7 @@ From the Realtime Trains device page → *Add departure board*.
 | Detailed mode | Toggle internal times and STP indicators. Requires the `allowDetailed` entitlement. |
 | Polling interval | Seconds between polls (30–3600, default 90). |
 
-Each departure board is its own device, grouped under the account.
+Each departure board is its own device, grouped under the account. To change a board's options later, open its entry and choose *Reconfigure* — the station is fixed, so add a new board if you want to monitor a different one.
 
 ### Service tracker
 
@@ -65,6 +65,8 @@ From the Realtime Trains device page → *Add service tracker*.
 | Unique identity | Optional alternative — the full `namespace:identity:date` string. |
 
 The service tracker polls every 15 minutes by default while the service is scheduled but not yet running, switches to every 30 seconds once the service is in run, and drops to hourly once it completes or is cancelled.
+
+To follow a different train without removing the tracker, open its entry and choose *Reconfigure*.
 
 ## 5. Use it
 
