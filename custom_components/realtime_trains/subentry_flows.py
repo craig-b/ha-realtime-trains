@@ -72,6 +72,16 @@ from .models import Stop
 
 _LOGGER = logging.getLogger(__name__)
 
+
+class _SubentryError(Exception):
+    """Carries a config-flow error key for a failed subentry validation."""
+
+    def __init__(self, key: str) -> None:
+        """Store the translation/error key to surface on the form."""
+        super().__init__(key)
+        self.key = key
+
+
 # --- Departure board -------------------------------------------------------
 
 
@@ -317,7 +327,7 @@ class DepartureBoardSubentryFlow(ConfigSubentryFlow):
         entry = self._get_entry()
         try:
             return int(entry.data.get(CONF_DEFAULT_SLOT_COUNT, DEFAULT_SLOT_COUNT))
-        except (TypeError, ValueError):
+        except TypeError, ValueError:
             return DEFAULT_SLOT_COUNT
 
 
@@ -357,16 +367,17 @@ class ServiceTrackerSubentryFlow(ConfigSubentryFlow):
     ) -> SubentryFlowResult:
         """Collect headcode + date (or unique_identity) and verify the service."""
         if user_input is not None:
-            data, title, err = await self._resolve_service(user_input)
-            if err is None:
-                return self.async_create_entry(title=title, data=data)
-            return self.async_show_form(
-                step_id="user",
-                data_schema=self.add_suggested_values_to_schema(
-                    _SERVICE_STEP1_SCHEMA, suggested_values=user_input
-                ),
-                errors={"base": err},
-            )
+            try:
+                data, title = await self._resolve_service(user_input)
+            except _SubentryError as err:
+                return self.async_show_form(
+                    step_id="user",
+                    data_schema=self.add_suggested_values_to_schema(
+                        _SERVICE_STEP1_SCHEMA, suggested_values=user_input
+                    ),
+                    errors={"base": err.key},
+                )
+            return self.async_create_entry(title=title, data=data)
         return self.async_show_form(step_id="user", data_schema=_SERVICE_STEP1_SCHEMA)
 
     async def async_step_reconfigure(
@@ -375,19 +386,20 @@ class ServiceTrackerSubentryFlow(ConfigSubentryFlow):
         """Re-point an existing tracker at a different service."""
         subentry = self._get_reconfigure_subentry()
         if user_input is not None:
-            data, title, err = await self._resolve_service(user_input)
-            if err is None:
-                # The entry's update listener reloads it, rebuilding the
-                # tracker coordinator with the new service identity.
-                return self.async_update_and_abort(
-                    self._get_entry(), subentry, title=title, data=data
+            try:
+                data, title = await self._resolve_service(user_input)
+            except _SubentryError as err:
+                return self.async_show_form(
+                    step_id="reconfigure",
+                    data_schema=self.add_suggested_values_to_schema(
+                        _SERVICE_STEP1_SCHEMA, suggested_values=user_input
+                    ),
+                    errors={"base": err.key},
                 )
-            return self.async_show_form(
-                step_id="reconfigure",
-                data_schema=self.add_suggested_values_to_schema(
-                    _SERVICE_STEP1_SCHEMA, suggested_values=user_input
-                ),
-                errors={"base": err},
+            # The entry's update listener reloads it, rebuilding the tracker
+            # coordinator with the new service identity.
+            return self.async_update_and_abort(
+                self._get_entry(), subentry, title=title, data=data
             )
         return self.async_show_form(
             step_id="reconfigure",
@@ -398,20 +410,20 @@ class ServiceTrackerSubentryFlow(ConfigSubentryFlow):
 
     async def _resolve_service(
         self, user_input: dict[str, Any]
-    ) -> tuple[dict[str, Any] | None, str | None, str | None]:
-        """Verify a service and build its subentry data + title.
+    ) -> tuple[dict[str, Any], str]:
+        """Verify a service and build its subentry ``(data, title)``.
 
-        Returns ``(data, title, None)`` on success, or
-        ``(None, None, error_key)`` when validation or lookup fails.
+        Raises :class:`_SubentryError` (carrying a form error key) when
+        validation or the lookup fails.
         """
         coordinator = self._coordinator()
         unique_identity = (user_input.get(CONF_UNIQUE_IDENTITY) or "").strip()
         headcode = (user_input.get(CONF_HEADCODE) or "").strip()
         date = (user_input.get(CONF_DATE) or "").strip()
         if coordinator is None:
-            return None, None, "account_not_ready"
+            raise _SubentryError("account_not_ready")
         if not unique_identity and not headcode:
-            return None, None, "headcode_required"
+            raise _SubentryError("headcode_required")
         try:
             if unique_identity:
                 service = await coordinator.serialise(
@@ -428,7 +440,7 @@ class ServiceTrackerSubentryFlow(ConfigSubentryFlow):
                 )
         except Exception as err:  # noqa: BLE001
             _LOGGER.warning("Service lookup failed: %s", err)
-            return None, None, "service_not_found"
+            raise _SubentryError("service_not_found") from err
         sm = getattr(service, "schedule_metadata", None)
         resolved = getattr(sm, "unique_identity", None) or unique_identity
         title = self._tracker_title(
@@ -447,7 +459,7 @@ class ServiceTrackerSubentryFlow(ConfigSubentryFlow):
             CONF_DATE: date,
             CONF_NAMESPACE: DEFAULT_NAMESPACE,
         }
-        return data, title, None
+        return data, title
 
     def _tracker_title(self, *, headcode: str, date: str, unique_identity: str) -> str:
         # ``unique_identity`` is shaped ``namespace:identity:date`` so the
