@@ -549,7 +549,6 @@ class RealtimeTrainsBoardSensor(_BaseBoardEntity, SensorEntity):
             "namespace": slot.namespace,
             "mode": slot.mode,
             "in_passenger_service": slot.in_passenger_service,
-            "onboard_facilities": slot.onboard_facilities,
             "stock_branding": slot.stock_branding,
         }
         # Strip None values to keep the entity compact.

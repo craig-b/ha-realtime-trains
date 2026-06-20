@@ -139,12 +139,11 @@ def _translate(err: RttError) -> UpdateFailed:
     return UpdateFailed(translation_domain=DOMAIN, translation_key="unknown")
 
 
-def _raise_auth(err: RttError) -> ConfigEntryError:
-    """Wrap an auth failure in a translated ConfigEntryError.
+def _raise_auth() -> ConfigEntryError:
+    """Build a translated ConfigEntryError for an auth failure.
 
-    Returns the exception (rather than raising) so callers can decide
-    whether to raise it from a setup path (becomes a repair issue) or
-    propagate via ``raise``.
+    Returns the exception (rather than raising) so callers can raise it
+    with the originating error chained via ``raise ... from err``.
     """
     return ConfigEntryError(
         translation_domain=DOMAIN,
@@ -220,7 +219,7 @@ class RealtimeTrainsAccountCoordinator(DataUpdateCoordinator[AccountData]):
                 self._stops_cache = await self.serialise(self._api.async_get_stops)
                 self._stops_cache_at = now
             except RttAuthError as err:
-                raise _raise_auth(err) from err
+                raise _raise_auth() from err
             except RttError as err:
                 raise _translate(err) from err
         return self._stops_cache or []
@@ -250,7 +249,7 @@ class RealtimeTrainsAccountCoordinator(DataUpdateCoordinator[AccountData]):
             api_info = await self.serialise(self._api.async_get_info)
             stops = self._stops_cache
         except RttAuthError as err:
-            raise _raise_auth(err) from err
+            raise _raise_auth() from err
         except RttError as err:
             raise _translate(err) from err
         return AccountData(api_info=api_info, stops=stops or [])
@@ -288,7 +287,6 @@ class DepartureSlot:
     namespace: str | None
     mode: str | None
     in_passenger_service: bool | None
-    onboard_facilities: list[str] | None
     stock_branding: str | None
 
 
@@ -367,7 +365,6 @@ def _slot_from_lineup(
     platform_planned: str | None = None
     platform_actual: str | None = None
     stock_branding: str | None = None
-    onboard_facilities: list[str] | None = None
     if md is not None:
         if md.platform is not None:
             platform_planned = md.platform.planned
@@ -423,7 +420,6 @@ def _slot_from_lineup(
         namespace=ns,
         mode=mode,
         in_passenger_service=in_service,
-        onboard_facilities=onboard_facilities,
         stock_branding=stock_branding,
     )
 
@@ -491,7 +487,7 @@ class RealtimeTrainsBoardCoordinator(DataUpdateCoordinator[BoardData]):
                 namespace=self.namespace,
             )
         except RttAuthError as err:
-            raise _raise_auth(err) from err
+            raise _raise_auth() from err
         except RttError as err:
             raise _translate(err) from err
         if isinstance(
@@ -625,7 +621,7 @@ class RealtimeTrainsServiceTrackerCoordinator(
                     namespace=self.namespace,
                 )
         except RttAuthError as err:
-            raise _raise_auth(err) from err
+            raise _raise_auth() from err
         except RttError as err:
             raise _translate(err) from err
         # The tracker only ever uses /gb-nr/service (allocator + KYT data).
