@@ -648,3 +648,19 @@ def async_setup_services(hass: HomeAssistant) -> None:
         schema=_REFRESH_NOW_SCHEMA,
         supports_response=SupportsResponse.OPTIONAL,
     )
+
+
+@callback
+def async_unload_services(hass: HomeAssistant) -> None:
+    """Remove all realtime_trains services.
+
+    Called when the final account entry unloads so the integration leaves
+    no orphaned services behind that would call into torn-down runtime.
+    """
+    for service_name in (
+        SERVICE_GET_DEPARTURES,
+        SERVICE_GET_SERVICE,
+        SERVICE_FIND_STATION,
+        SERVICE_REFRESH_NOW,
+    ):
+        hass.services.async_remove(DOMAIN, service_name)

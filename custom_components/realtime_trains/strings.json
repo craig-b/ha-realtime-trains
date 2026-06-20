@@ -260,7 +260,7 @@
           "name": "Limit"
         },
         "namespace": {
-          "description": "Filter to one namespace. Defaults to your token's first namespace.",
+          "description": "Filter to one namespace, e.g. gb-nr. Leave blank to include all namespaces.",
           "name": "Namespace"
         },
         "query": {
