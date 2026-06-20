@@ -32,6 +32,7 @@ from custom_components.realtime_trains.coordinator import (
     RealtimeTrainsBoardCoordinator,
     RealtimeTrainsServiceTrackerCoordinator,
     ServiceTrackerData,
+    _slot_from_lineup,
 )
 from custom_components.realtime_trains.models import (
     NetworkRailLocationLineUp,
@@ -77,8 +78,7 @@ def test_slot_from_lineup_extracts_key_fields(hass: HomeAssistant) -> None:
     svc = response.services[0]
     assert isinstance(svc, NetworkRailLocationLineUp)
 
-    coordinator = RealtimeTrainsBoardCoordinator.__new__(RealtimeTrainsBoardCoordinator)
-    slot = coordinator._slot_from_lineup(svc)
+    slot = _slot_from_lineup(svc)
 
     assert isinstance(slot, DepartureSlot)
     assert slot.headcode == "1L40"
@@ -90,8 +90,7 @@ def test_slot_from_lineup_extracts_key_fields(hass: HomeAssistant) -> None:
 def test_slot_from_lineup_handles_missing_fields(hass: HomeAssistant) -> None:
     """Missing optional fields produce None, not exceptions."""
     svc = NetworkRailLocationLineUp.from_dict({})
-    coordinator = RealtimeTrainsBoardCoordinator.__new__(RealtimeTrainsBoardCoordinator)
-    slot = coordinator._slot_from_lineup(svc)
+    slot = _slot_from_lineup(svc)
     assert slot.headcode is None
     assert slot.platform_planned is None
     assert slot.delay is None
@@ -294,22 +293,25 @@ async def test_service_tracker_cadence_adapts_to_state(
 
 
 async def test_account_coordinator_refreshes_api_info(hass: HomeAssistant) -> None:
-    """Account coordinator fetches /api/info and stops list on first refresh."""
-    from custom_components.realtime_trains.models import ApiInfo
+    """Account coordinator fetches /api/info; stops come from the cache."""
+    from custom_components.realtime_trains.models import ApiInfo, Stop
 
     entry = _make_config_entry(hass)
     mock_api = MagicMock()
     mock_api.async_get_info = AsyncMock(return_value=ApiInfo(api_version="2026-04-09"))
-    stops_body = json.loads((FIXTURES / "stops.json").read_text())
-    from custom_components.realtime_trains.models import Stop
-
+    stops_body = _load_fixture("stops.json")
     mock_api.async_get_stops = AsyncMock(
         return_value=[Stop.from_dict(s) for s in stops_body.get("stops", [])]
     )
 
     coordinator = RealtimeTrainsAccountCoordinator(hass, entry, mock_api)
-    data = await coordinator._async_update_data()
 
+    # ``_async_update_data`` only polls /api/info and reads the stops cache;
+    # the stops list is populated lazily via ``refresh_stops``.
+    stops = await coordinator.refresh_stops()
+    assert len(stops) > 0
+
+    data = await coordinator._async_update_data()
     assert data.api_info is not None
     assert data.api_info.api_version == "2026-04-09"
     assert len(data.stops) > 0

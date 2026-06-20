@@ -1,7 +1,9 @@
-pytest>=9.0
-pytest-asyncio>=1.4
-pytest-timeout
-pytest-cov
-pytest-github-actions-annotate-failures
-aiohttp>=3.13
+# pytest-homeassistant-custom-component pins a matching Home Assistant
+# release plus the full pytest tooling (pytest, pytest-asyncio,
+# pytest-cov, pytest-timeout, pytest-github-actions-annotate-failures,
+# syrupy, …) and provides the `hass` / `enable_custom_integrations`
+# fixtures the integration tests rely on. Let it own those versions so we
+# never fight its exact pins.
+pytest-homeassistant-custom-component
+# Only extra not bundled by PHACC: used by tests/test_api.py.
 aioresponses

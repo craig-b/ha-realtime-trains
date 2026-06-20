@@ -29,9 +29,10 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install homeassistant
+          # PHACC (in requirements_test.txt) pins a matching Home Assistant
+          # release plus pytest, pytest-cov, coverage, etc. Installing those
+          # separately would fight its exact pins, so install only this.
           pip install -r requirements_test.txt
-          pip install pytest-cov coverage[toml]
 
       - name: Run pytest
         env:
