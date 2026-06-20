@@ -63,7 +63,11 @@ from .const import (
     SUBENTRY_TYPE_DEPARTURE_BOARD,
     SUBENTRY_TYPE_SERVICE_TRACKER,
 )
-from .coordinator import RealtimeTrainsAccountCoordinator, RealtimeTrainsRuntimeData
+from .coordinator import (
+    RealtimeTrainsAccountCoordinator,
+    RealtimeTrainsRuntimeData,
+    board_display_name,
+)
 from .models import Stop
 
 _LOGGER = logging.getLogger(__name__)
@@ -229,7 +233,11 @@ class DepartureBoardSubentryFlow(ConfigSubentryFlow):
         data[CONF_STATION_DESCRIPTION] = station.description or station_code
         # Fall back to the account-level default for slot_count if not set.
         data.setdefault(CONF_SLOT_COUNT, self._account_default_slot_count())
-        title = station.description or station_code or "Departure board"
+        title = board_display_name(
+            data.get(CONF_STATION_DESCRIPTION) or station_code,
+            data.get(CONF_FILTER_FROM),
+            data.get(CONF_FILTER_TO),
+        )
         return self.async_create_entry(title=title, data=data)
 
     def _coordinator(self) -> RealtimeTrainsAccountCoordinator | None:

@@ -49,6 +49,7 @@ from .coordinator import (
     RealtimeTrainsRuntimeData,
     RealtimeTrainsServiceTrackerCoordinator,
     ServiceTrackerData,
+    board_display_name,
 )
 from .models import RateLimitEntry, RateLimitSnapshot
 
@@ -226,7 +227,9 @@ def _board_device_info(
     """Build device info for a per-board device."""
     return DeviceInfo(
         identifiers={(DOMAIN, f"board:{coordinator.subentry_id}")},
-        name=data.station_description or "Board",
+        name=board_display_name(
+            data.station_description, coordinator.filter_from, coordinator.filter_to
+        ),
         manufacturer=MANUFACTURER,
         model="Departure board",
         entry_type=DeviceEntryType.SERVICE,

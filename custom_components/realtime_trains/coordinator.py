@@ -110,6 +110,26 @@ type RealtimeTrainsConfigEntry = ConfigEntry[RealtimeTrainsRuntimeData]
 # --- Shared exception mapping ----------------------------------------------
 
 
+def board_display_name(
+    station: str | None,
+    filter_from: str | None = None,
+    filter_to: str | None = None,
+) -> str:
+    """Compose a board's display name, folding in the direction filter.
+
+    Two boards for the same station differ only by their from/to filter,
+    so include it to keep the devices distinguishable.
+    """
+    base = station or "Board"
+    if filter_from and filter_to:
+        return f"{base}: {filter_from} → {filter_to}"
+    if filter_to:
+        return f"{base} → {filter_to}"
+    if filter_from:
+        return f"{base} ← {filter_from}"
+    return base
+
+
 def _translate(err: RttError) -> UpdateFailed:
     """Map an RttError to a translated UpdateFailed (transient-cadence)."""
     if isinstance(err, RttRateLimitError):

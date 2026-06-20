@@ -33,6 +33,7 @@ from custom_components.realtime_trains.coordinator import (
     RealtimeTrainsServiceTrackerCoordinator,
     ServiceTrackerData,
     _slot_from_lineup,
+    board_display_name,
 )
 from custom_components.realtime_trains.models import (
     NetworkRailLocationLineUp,
@@ -65,6 +66,24 @@ def _make_subentry(subentry_type: str, data: dict) -> MagicMock:
     sub.subentry_type = subentry_type
     sub.data = data
     return sub
+
+
+def test_board_display_name_folds_in_direction() -> None:
+    """The direction filter differentiates boards for the same station."""
+    assert board_display_name("Station A") == "Station A"
+    assert (
+        board_display_name("Station A", filter_to="Station B")
+        == "Station A → Station B"
+    )
+    assert (
+        board_display_name("Station A", filter_from="Station C")
+        == "Station A ← Station C"
+    )
+    assert (
+        board_display_name("Station A", "Station C", "Station B")
+        == "Station A: Station C → Station B"
+    )
+    assert board_display_name(None) == "Board"
 
 
 # --- _slot_from_lineup ------------------------------------------------------
