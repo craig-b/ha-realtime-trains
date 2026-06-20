@@ -47,6 +47,17 @@ def test_individual_temporal_data_round_trip() -> None:
     assert parsed.realtime_actual.tzinfo is not None
 
 
+def test_naive_datetime_gets_uk_timezone() -> None:
+    """RTT values without an offset are made tz-aware (HA rejects naive)."""
+    parsed = m.IndividualTemporalData.from_dict(
+        {"scheduleAdvertised": "2026-06-20T19:12:00"}
+    )
+    assert parsed.schedule_advertised is not None
+    assert parsed.schedule_advertised.tzinfo is not None
+    # 20 June is BST, so Europe/London is UTC+1.
+    assert parsed.schedule_advertised.utcoffset().total_seconds() == 3600
+
+
 def test_geographic_location_with_short_and_long_codes() -> None:
     """A location with multiple long codes parses all of them."""
     data = {

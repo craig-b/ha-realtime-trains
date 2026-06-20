@@ -22,6 +22,10 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from enum import StrEnum
 from typing import Any
+from zoneinfo import ZoneInfo
+
+# RTT serves UK railway times; used to make naive timestamps tz-aware.
+_UK_TZ = ZoneInfo("Europe/London")
 
 
 def _str(d: dict[str, Any], key: str) -> str | None:
@@ -52,7 +56,13 @@ def _datetime(d: dict[str, Any], key: str) -> datetime | None:
     v = d.get(key)
     if v is None:
         return None
-    return datetime.fromisoformat(v)
+    dt = datetime.fromisoformat(v)
+    if dt.tzinfo is None:
+        # Most RTT responses carry an offset, but some omit it. The times
+        # are UK railway local time, so attach Europe/London — Home
+        # Assistant rejects naive datetimes on timestamp sensors.
+        dt = dt.replace(tzinfo=_UK_TZ)
+    return dt
 
 
 def _list_str(d: dict[str, Any], key: str) -> list[str]:
