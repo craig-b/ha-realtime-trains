@@ -4,7 +4,7 @@ Requires Home Assistant to be importable (CI environment or local HA
 core checkout). Skips entirely otherwise.
 """
 
-from datetime import datetime
+from datetime import datetime, timedelta
 import json
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock
@@ -20,6 +20,7 @@ from custom_components.realtime_trains.api import (
     RttAuthError,
     RttConnectionError,
     RttNotFoundError,
+    RttRateLimitError,
 )
 from custom_components.realtime_trains.const import (
     SUBENTRY_TYPE_DEPARTURE_BOARD,
@@ -32,6 +33,7 @@ from custom_components.realtime_trains.coordinator import (
     RealtimeTrainsBoardCoordinator,
     RealtimeTrainsServiceTrackerCoordinator,
     ServiceTrackerData,
+    _rate_limit_backoff,
     _slot_from_lineup,
     board_display_name,
 )
@@ -212,6 +214,60 @@ async def test_board_coordinator_connection_error_raises_update_failed(
     coordinator = RealtimeTrainsBoardCoordinator(hass, entry, "sub1", subentry, account)
     with pytest.raises(UpdateFailed):
         await coordinator._async_update_data()
+
+
+# --- Rate-limit backoff ----------------------------------------------------
+
+
+def test_rate_limit_backoff_honours_retry_after() -> None:
+    """A Retry-After hint wins when it exceeds the base cadence."""
+    base = timedelta(seconds=90)
+    out = _rate_limit_backoff(RttRateLimitError("slow", retry_after=300), base)
+    assert out == timedelta(seconds=300)
+
+
+def test_rate_limit_backoff_never_polls_sooner_than_base() -> None:
+    """A small Retry-After must not poll faster than the configured base."""
+    base = timedelta(seconds=90)
+    out = _rate_limit_backoff(RttRateLimitError("slow", retry_after=5), base)
+    assert out == base
+
+
+def test_rate_limit_backoff_doubles_without_hint() -> None:
+    """Without a hint the cadence doubles, capped at MAX_POLLING_INTERVAL."""
+    out = _rate_limit_backoff(RttRateLimitError("slow"), timedelta(seconds=90))
+    assert out == timedelta(seconds=180)
+    capped = _rate_limit_backoff(RttRateLimitError("slow"), timedelta(seconds=3000))
+    assert capped == timedelta(seconds=3600)
+
+
+async def test_board_coordinator_backs_off_then_restores(
+    hass: HomeAssistant,
+) -> None:
+    """A 429 backs the cadence off; the next success restores the base."""
+    entry = _make_config_entry(hass)
+    account = MagicMock(spec=RealtimeTrainsAccountCoordinator)
+    account.serialise = AsyncMock(
+        side_effect=RttRateLimitError("slow", retry_after=600)
+    )
+
+    subentry = _make_subentry(
+        SUBENTRY_TYPE_DEPARTURE_BOARD,
+        {"station": "CLPHMJN", "slot_count": 3, "namespace": "gb-nr"},
+    )
+    coordinator = RealtimeTrainsBoardCoordinator(hass, entry, "sub1", subentry, account)
+    base = coordinator.update_interval
+
+    with pytest.raises(UpdateFailed):
+        await coordinator._async_update_data()
+    assert coordinator.update_interval == timedelta(seconds=600)
+
+    # A subsequent successful poll restores the configured cadence.
+    account.serialise = AsyncMock(
+        return_value=NetworkRailLocationLineUpResponse.from_dict({})
+    )
+    await coordinator._async_update_data()
+    assert coordinator.update_interval == base
 
 
 # --- Service tracker coordinator -------------------------------------------
