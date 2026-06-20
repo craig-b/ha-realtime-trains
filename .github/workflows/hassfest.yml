@@ -37,7 +37,6 @@ jobs:
           python - <<'PY'
           import json, sys
           from homeassistant.util.json import load_json
-          from homeassistant.helpers.config_validation import config_entry_config_schema
 
           # Validate manifest.json
           manifest = load_json("custom_components/realtime_trains/manifest.json")
