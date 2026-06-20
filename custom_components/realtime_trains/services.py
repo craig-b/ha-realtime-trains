@@ -543,6 +543,7 @@ def _stop_to_dict(stop: Stop) -> dict[str, Any]:
 
 def _stop_matches(stop: Stop, query: str) -> bool:
     """Match a query string against description or codes (case-insensitive)."""
+    query = query.lower()
     description = (stop.description or "").lower()
     short_code = (stop.short_code or "").lower()
     unique_identity = (stop.unique_identity or "").lower()
